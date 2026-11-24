@@ -1,0 +1,23 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "meetingcraft-typhoon-proxy",
+  "main": "src/index.ts",
+  "account_id": "aa1d5f8e2f405d06cd915b83be578612", // ThasalaDev
+  "compatibility_date": "2026-11-24",
+  "workers_dev": true,
+  "vars": {
+    // Comma-separated list of web origins allowed to use this proxy.
+    "ALLOWED_ORIGINS": "https://kimookpong.github.io,http://localhost:5173,http://localhost:4173"
+  },
+  // Set with `wrangler secret put TYPHOON_API_KEY` — never in this file.
+  "secrets": { "required": ["TYPHOON_API_KEY"] },
+  "ratelimits": [
+    // Per client IP. Free Typhoon tier allows ~200 req/min overall, so keep each visitor well below that.
+    { "name": "RL_IP", "namespace_id": "1001", "simple": { "limit": 30, "period": 60 } }
+  ],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
+    "traces": { "enabled": true }
+  }
+}

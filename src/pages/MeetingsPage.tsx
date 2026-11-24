@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Link, useLocation } from 'wouter'
 import { db, getSetting, setSetting } from '../db/schema'
@@ -6,10 +6,10 @@ import { downloadModel, modelStates, type ModelState } from '../models/modelStor
 import { MODELS, totalSize, type ModelKey } from '../models/registry'
 import { Empty, Progress, Spinner } from '../components/ui'
 import { ArtRecord, ArtWave } from '../components/art'
-import { IconCamera, IconCheck, IconChevron, IconClock, IconDoc, IconMic, IconPin, IconSearch, IconShield, IconSparkles, IconUsers } from '../components/icons'
+import { IconCamera, IconCheck, IconImport, IconChevron, IconClock, IconDoc, IconMic, IconPin, IconSearch, IconShield, IconSparkles, IconUsers } from '../components/icons'
 import { fmtBytes, fmtClock, fmtTime, relDay } from '../lib/format'
 import { useAsrConfig } from '../asr/recorder'
-import { startNewMeeting } from '../lib/actions'
+import { startImport, startNewMeeting } from '../lib/actions'
 import { Logo } from '../components/Logo'
 import { LangToggle } from '../components/LangToggle'
 import { useT, type Dict } from '../i18n'
@@ -25,6 +25,7 @@ function greeting(t: Dict) {
 export function MeetingsPage() {
   const [, nav] = useLocation()
   const t = useT()
+  const importRef = useRef<HTMLInputElement>(null)
   const [q, setQ] = useState('')
   const meetings = useLiveQuery(() => db.meetings.orderBy('updatedAt').reverse().toArray(), [])
   const counts = useLiveQuery(async () => {
@@ -70,6 +71,9 @@ export function MeetingsPage() {
             <div className="mt-4 flex flex-wrap gap-2">
               <button onClick={() => startNewMeeting(nav)} className="btn bg-white text-brand-700 hover:bg-brand-50"><IconMic /> {t.home.record}</button>
               <button onClick={() => startNewMeeting(nav, 'docs')} className="btn bg-white/15 text-white hover:bg-white/25"><IconCamera /> {t.home.scan}</button>
+              <button onClick={() => importRef.current?.click()} className="btn bg-white/15 text-white hover:bg-white/25"><IconImport /> {t.import.homeButton}</button>
+              <input ref={importRef} type="file" hidden accept="audio/*,video/*,.m4a,.mp4,.mp3,.wav,.webm,.ogg,.aac"
+                onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) startImport(nav, f) }} />
             </div>
           </div>
         </div>

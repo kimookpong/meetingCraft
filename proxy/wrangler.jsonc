@@ -13,7 +13,9 @@
   "secrets": { "required": ["TYPHOON_API_KEY"] },
   "ratelimits": [
     // Per client IP. Free Typhoon tier allows ~200 req/min overall, so keep each visitor well below that.
-    { "name": "RL_IP", "namespace_id": "1001", "simple": { "limit": 30, "period": 60 } }
+    { "name": "RL_IP", "namespace_id": "1001", "simple": { "limit": 30, "period": 60 } },
+    // Transcription gets its own budget: live online meetings and long imports send many short clips.
+    { "name": "RL_AUDIO", "namespace_id": "1002", "simple": { "limit": 60, "period": 60 } }
   ],
   "observability": {
     "enabled": true,

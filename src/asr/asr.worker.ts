@@ -14,6 +14,8 @@ const post = (m: AsrOut) => (self as unknown as Worker).postMessage(m)
 const PARTIAL_EVERY = Math.round(3 * SAMPLE_RATE)
 const MAX_UTTERANCE = 20 * SAMPLE_RATE
 const PREROLL = Math.round(0.3 * SAMPLE_RATE)
+const BATCH_MAX = 25 * SAMPLE_RATE
+const BATCH_GAP = 3 * SAMPLE_RATE
 
 let cloud: CloudAsr | null = null
 
@@ -48,9 +50,16 @@ async function decode(audio: Float32Array): Promise<string> {
   // Ask for phrase timestamps so we can put spaces where the speaker paused.
   form.append('response_format', 'verbose_json')
   form.append('timestamp_granularities[]', 'word')
-  const res = await fetch(`${cloud.baseUrl.replace(/\/$/, '')}/audio/transcriptions`, {
-    method: 'POST', headers: cloud.apiKey ? { Authorization: `Bearer ${cloud.apiKey}` } : {}, body: form,
-  })
+  let res: Response
+  for (let attempt = 0; ; attempt++) {
+    res = await fetch(`${cloud.baseUrl.replace(/\/$/, '')}/audio/transcriptions`, {
+      method: 'POST', headers: cloud.apiKey ? { Authorization: `Bearer ${cloud.apiKey}` } : {}, body: form,
+    })
+    // Rate limited (proxy or Typhoon): wait as told, then retry — long imports keep going.
+    if (res.status !== 429 || attempt >= 6) break
+    const wait = Math.min(60, Number(res.headers.get('Retry-After')) || 10 * (attempt + 1))
+    await new Promise((r) => setTimeout(r, wait * 1000))
+  }
   if (!res.ok) throw new Error(`Transcription failed (HTTP ${res.status}) ${(await res.text()).slice(0, 160)}`)
   return normalizeThai(spaced(await res.json()))
 }
@@ -178,6 +187,15 @@ async function transcribeAll(pcm: Float32Array, base: number) {
     }
   }
   if (start >= 0) segs.push([start, pcm.length])
+  // Offline: merge neighbouring utterances into ~25 s requests (fewer API calls, more context).
+  const merged: [number, number][] = []
+  for (const s of segs) {
+    const prev = merged[merged.length - 1]
+    if (prev && s[1] - prev[0] <= BATCH_MAX && s[0] - prev[1] <= BATCH_GAP) prev[1] = s[1]
+    else merged.push([s[0], s[1]])
+  }
+  segs.length = 0
+  segs.push(...merged)
   const totalMs = (pcm.length / SAMPLE_RATE) * 1000
   for (const [a, b] of segs) {
     if (b - a < SAMPLE_RATE * 0.3) continue

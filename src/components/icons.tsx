@@ -32,3 +32,5 @@ export const IconUsers = base(<><circle cx="9" cy="9" r="3.2" /><path d="M3.5 19
 export const IconPin = base(<><path d="M12 21s-6.5-6-6.5-11a6.5 6.5 0 0 1 13 0c0 5-6.5 11-6.5 11z" /><circle cx="12" cy="10" r="2.3" /></>)
 export const IconWave = base(<path d="M3 12h2M7 8v8M11 5v14M15 9v6M19 11v2" />)
 export const IconPen = base(<><path d="M4 20h4L19 9l-4-4L4 16z" /><path d="M13.5 6.5l4 4" /></>)
+export const IconScreen = base(<><rect x="3" y="4" width="18" height="12" rx="2" /><path d="M8 20h8M12 16v4" /></>)
+export const IconImport = base(<><path d="M12 3v12M7 10l5 5 5-5" /><path d="M5 15v4a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-4" /></>)

@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useLocation } from 'wouter'
 import { db, deleteMeeting } from '../db/schema'
 import { TopBar, Sheet, Spinner } from '../components/ui'
 import { confirmDialog, toast } from '../components/feedback'
-import { IconBack, IconDoc, IconDownload, IconMore, IconPen, IconPin, IconShare, IconSparkles, IconTrash, IconUsers, IconWave } from '../components/icons'
+import { IconBack, IconDoc, IconDownload, IconImport, IconMore, IconPen, IconPin, IconShare, IconSparkles, IconTrash, IconUsers, IconWave } from '../components/icons'
 import { fmtClock, fmtDate } from '../lib/format'
 import { recorder, transcribeRecording, useAsrConfig } from '../asr/recorder'
 import { meetingMarkdown, shareOrDownload, downloadBlob, fileBase } from '../lib/exporters'
@@ -16,6 +16,8 @@ import { RecordDock } from './meeting/RecordDock'
 import { DetailsSheet } from './meeting/DetailsSheet'
 import { VoiceChat } from '../chat/VoiceChat'
 import { useT } from '../i18n'
+import { importRecording, type ImportStage } from '../lib/importAudio'
+import { takePendingImport } from '../lib/actions'
 
 type Tab = 'transcript' | 'docs' | 'summary'
 
@@ -41,6 +43,29 @@ export function MeetingPage({ id }: { id: string }) {
     const t = sessionStorage.getItem(`tab:${id}`)
     if (t) { setTab(t as Tab); sessionStorage.removeItem(`tab:${id}`) }
   }, [id])
+
+  const fileRef = useRef<HTMLInputElement>(null)
+  const stages: Record<ImportStage, string> = { decoding: t.import.decoding, saving: t.import.saving, transcribing: t.import.transcribing }
+  const runImport = async (file: File) => {
+    setTab('transcript')
+    setBusy(t.import.decoding)
+    try {
+      const transcribed = await importRecording(id, file, (s) => setBusy(stages[s]))
+      toast(transcribed ? t.import.done : t.import.savedOnly, transcribed ? 'ok' : 'info')
+      if (transcribed) setOffer(true)
+    } catch (e) { toast((e as Error).message, 'bad') } finally { setBusy('') }
+  }
+  // A file picked on the home screen ("Import file") is imported once this page opens.
+  useEffect(() => { const f = takePendingImport(id); if (f) runImport(f) }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Offer a spoken debrief right after a recording of this meeting ends (button or end of screen share).
+  const lastStop = useRef(rec.stoppedAt)
+  useEffect(() => {
+    if (!rec.stoppedAt || rec.stoppedAt === lastStop.current) return
+    lastStop.current = rec.stoppedAt
+    if (rec.meetingId !== id) return
+    db.segments.where('meetingId').equals(id).count().then((n) => (n > 0 ? setOffer(true) : toast(t.meeting.audioSaved)))
+  }, [rec.stoppedAt]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (meeting === undefined) return <div className="grid min-h-dvh place-items-center"><Spinner className="h-8 w-8 text-brand-600" /></div>
   if (!meeting) return <div className="p-6">{t.meeting.notFound}</div>
@@ -102,16 +127,13 @@ export function MeetingPage({ id }: { id: string }) {
         </div>
       )}
       <main className="mx-auto max-w-2xl px-4 pt-3">
-        {tab === 'transcript' && <TranscriptTab meeting={meeting} live={isRecordingHere} />}
+        {tab === 'transcript' && <TranscriptTab meeting={meeting} live={isRecordingHere} onImport={() => fileRef.current?.click()} />}
         {tab === 'docs' && <DocumentsTab meeting={meeting} />}
         {tab === 'summary' && <SummaryTab meeting={meeting} onGoTranscript={() => setTab('transcript')} />}
       </main>
-      <RecordDock meeting={meeting} onStopped={async () => {
-        // Offer a spoken debrief when something was actually captured.
-        const n = await db.segments.where('meetingId').equals(id).count()
-        if (n > 0) setOffer(true)
-        else toast(t.meeting.audioSaved)
-      }} />
+      <RecordDock meeting={meeting} />
+      <input ref={fileRef} type="file" hidden accept="audio/*,video/*,.m4a,.mp4,.mp3,.wav,.webm,.ogg,.aac"
+        onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) runImport(f) }} />
       <Sheet open={offer} onClose={() => setOffer(false)} title={t.meeting.offerTitle}>
         <div className="pb-2 text-center">
           <div className="mx-auto mb-3 grid h-16 w-16 place-items-center rounded-2xl bg-accent-100 text-accent-700"><IconSparkles width={30} height={30} /></div>
@@ -138,6 +160,8 @@ export function MeetingPage({ id }: { id: string }) {
               if (!chunks.length) throw new Error(t.meeting.noAudio)
               downloadBlob(await pcm16ToWav(chunks.map((c) => c.pcm)), `${fileBase(meeting)}.wav`)
             })} />
+          <MenuItem icon={<IconImport />} label={t.import.menu} hint={t.import.menuHint} disabled={isRecordingHere}
+            onClick={() => { setMenu(false); fileRef.current?.click() }} />
           <MenuItem icon={<IconWave />} label={t.meeting.menuRetranscribe} hint={!asr?.available ? asr?.reason : t.meeting.menuRetranscribeHint}
             disabled={!asr?.available || isRecordingHere}
             onClick={() => run(t.meeting.retranscribing, () => transcribeRecording(id), t.meeting.retranscribed)} />

@@ -50,7 +50,8 @@ export default {
     if (request.method !== route.method) return json(405, 'method not allowed', cors)
 
     const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown'
-    const { success } = await env.RL_IP.limit({ key: ip })
+    const limiter = url.pathname === '/v1/audio/transcriptions' ? env.RL_AUDIO : env.RL_IP
+    const { success } = await limiter.limit({ key: ip })
     if (!success) return json(429, 'คำขอถี่เกินไป กรุณารอสักครู่แล้วลองใหม่', { ...cors, 'Retry-After': '60' })
 
     const headers = new Headers({ Authorization: `Bearer ${env.TYPHOON_API_KEY.trim()}` })

@@ -9,7 +9,7 @@ import { fmtClock } from '../../lib/format'
 import { speak, stopSpeaking, ttsState } from '../../tts/player'
 import { useT } from '../../i18n'
 
-export function TranscriptTab({ meeting, live }: { meeting: Meeting; live: boolean }) {
+export function TranscriptTab({ meeting, live, onImport }: { meeting: Meeting; live: boolean; onImport?: () => void }) {
   const segs = useLiveQuery(
     () => db.segments.where('[meetingId+startMs]').between([meeting.id, -Infinity], [meeting.id, Infinity]).toArray(),
     [meeting.id],
@@ -43,7 +43,8 @@ export function TranscriptTab({ meeting, live }: { meeting: Meeting; live: boole
   return (
     <div>
       {empty && (
-        <Empty art={<ArtRecord size={132} />} title={t.transcript.emptyTitle}>
+        <Empty art={<ArtRecord size={132} />} title={t.transcript.emptyTitle}
+          action={onImport && <button className="btn-ghost min-h-10 text-sm text-brand-700 underline decoration-dotted underline-offset-2" onClick={onImport}>{t.import.emptyAction}</button>}>
           {t.transcript.emptyBody}
         </Empty>
       )}

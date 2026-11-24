@@ -20,7 +20,16 @@ export interface RecorderState {
   message?: string
   /** Offline (re)transcription progress 0..1, when running. */
   offline?: number
+  /** Audio source of the current/last recording. */
+  source?: RecordSource
+  /** Set when a recording ends (by the user or because screen sharing stopped). */
+  stoppedAt?: number
 }
+
+export type RecordSource = 'mic' | 'online'
+
+/** Desktop browsers can capture a tab/window/system audio; phones cannot. */
+export const canCaptureMeetingAudio = () => typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getDisplayMedia && !/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
 
 export const recorder = createStore<RecorderState>({
   status: 'idle', elapsedMs: 0, level: -90, speaking: false, partial: '', asr: 'off',
@@ -113,6 +122,7 @@ export function unloadAsr() {
 // ---- live recording ----------------------------------------------------------
 let ctx: AudioContext | null = null
 let stream: MediaStream | null = null
+let extraStreams: MediaStream[] = []
 let node: AudioWorkletNode | null = null
 let wakeLock: { release(): Promise<void> } | null = null
 let timer = 0
@@ -136,23 +146,39 @@ async function savePending(meetingId: string) {
   await db.audio.add({ id: uid(), meetingId, seq: chunkSeq++, startMs, sampleRate: 16000, pcm: floatToPcm16Blob(all) })
 }
 
-export async function startRecording(meetingId: string, language: AsrLanguage, transcribe: boolean) {
+export async function startRecording(meetingId: string, language: AsrLanguage, transcribe: boolean, source: RecordSource = 'mic', includeMic = true) {
   if (recorder.get().status !== 'idle') return
-  patch({ status: 'starting', meetingId, message: undefined, partial: '' })
+  patch({ status: 'starting', meetingId, message: undefined, partial: '', source })
   // Create the AudioContext synchronously inside the tap: browsers (iOS Safari especially)
   // start contexts created after an await as "suspended" and the worklet would get no audio.
   ctx = new AudioContext()
   ctx.resume()
   try {
+    let display: MediaStream | null = null
+    if (source === 'online') {
+      // Must be the first await so the share picker still counts as part of the user's tap.
+      display = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+        // Chrome hints: offer system audio and don't suggest sharing this very tab.
+        ...({ systemAudio: 'include', selfBrowserSurface: 'exclude', surfaceSwitching: 'include' } as object),
+      } as DisplayMediaStreamOptions)
+      extraStreams.push(display)
+      if (!display.getAudioTracks().length) throw new Error(getT().record.noShareAudio)
+      // Ending the share from the browser's own bar stops the recording too.
+      display.getAudioTracks()[0].addEventListener('ended', () => { stopRecording().then(() => patch({ message: getT().record.shareEnded })) })
+    }
     const meeting = await db.meetings.get(meetingId)
     baseMs = meeting?.durationMs ?? 0
     const lastChunk = await db.audio.where('[meetingId+seq]').between([meetingId, -Infinity], [meetingId, Infinity]).last()
     chunkSeq = lastChunk ? lastChunk.seq + 1 : 0
     chunkStartMs = baseMs
 
-    stream = await navigator.mediaDevices.getUserMedia({
-      audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-    })
+    if (source === 'mic' || includeMic) {
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      })
+    }
     let asrOn = false
     if (transcribe) {
       try {
@@ -169,7 +195,6 @@ export async function startRecording(meetingId: string, language: AsrLanguage, t
     }
     await ctx.audioWorklet.addModule(workletUrl)
     await ctx.resume()
-    const src = ctx.createMediaStreamSource(stream)
     node = new AudioWorkletNode(ctx, 'capture-processor')
     node.port.onmessage = (e: MessageEvent<Float32Array>) => {
       if (recorder.get().status !== 'recording') return
@@ -184,12 +209,16 @@ export async function startRecording(meetingId: string, language: AsrLanguage, t
         patch({ level: 10 * Math.log10(e2 / pcm.length + 1e-12) })
       }
     }
-    src.connect(node)
+    // Inputs connected to the same node are summed: meeting audio + my mic.
+    if (display) ctx.createMediaStreamSource(new MediaStream(display.getAudioTracks())).connect(node)
+    if (stream) ctx.createMediaStreamSource(stream).connect(node)
     try { wakeLock = await (navigator as Navigator & { wakeLock?: { request(t: 'screen'): Promise<{ release(): Promise<void> }> } }).wakeLock?.request('screen') ?? null } catch { wakeLock = null }
     startedAt = performance.now()
     timer = window.setInterval(() => patch({ elapsedMs: baseMs + performance.now() - startedAt }), 250)
     await touchMeeting(meetingId, { status: 'recording', language })
     patch({ status: 'recording', elapsedMs: baseMs })
+    // Dev-only hook used by end-to-end tests to inspect the capture graph.
+    if (import.meta.env.DEV) Object.assign(globalThis, { __mcRec: { mic: stream, display: extraStreams[0], ctx, includeMic, source, worker } })
   } catch (err) {
     await teardown()
     patch({ status: 'idle', message: err instanceof Error ? err.message : String(err) })
@@ -217,6 +246,8 @@ async function teardown() {
   onFinal = null // stop writing segments once this recording is over (voice chat shares the worker)
   node?.disconnect()
   stream?.getTracks().forEach((t) => t.stop())
+  extraStreams.forEach((s) => s.getTracks().forEach((t) => t.stop()))
+  extraStreams = []
   await ctx?.close().catch(() => {})
   await wakeLock?.release().catch(() => {})
   ctx = null; stream = null; node = null; wakeLock = null
@@ -250,24 +281,31 @@ export async function stopRecording() {
   onFinal = null
   await savePending(meetingId)
   await touchMeeting(meetingId, { status: 'done', durationMs: elapsed, endedAt: Date.now() })
-  patch({ status: 'idle', elapsedMs: 0, level: -90, speaking: false, partial: '' })
+  patch({ status: 'idle', elapsedMs: 0, level: -90, speaking: false, partial: '', stoppedAt: Date.now() })
 }
 
 // ---- offline (re)transcription -------------------------------------------------
+/** Transcribe a PCM buffer (16 kHz mono) and append segments starting at offsetMs. */
+export async function transcribePcm(meetingId: string, pcm: Float32Array, offsetMs: number) {
+  await ensureAsr()
+  patch({ offline: 0 })
+  await new Promise<void>((resolve, reject) => {
+    onOffline = (m) => {
+      if (m.type === 'final' && m.text) db.segments.add({ id: uid(), meetingId, startMs: m.startMs, endMs: m.endMs, text: m.text, source: 'asr' })
+      if (m.type === 'progress') patch({ offline: m.doneMs / m.totalMs })
+      if (m.type === 'transcribed') { onOffline = null; resolve() }
+      if (m.type === 'error') { onOffline = null; reject(new Error(m.message)) }
+    }
+    send({ type: 'transcribe', pcm, offsetMs }, [pcm.buffer])
+  }).finally(() => patch({ offline: undefined }))
+}
+
+/** Re-transcribe everything recorded for a meeting (replaces unedited ASR segments). */
 export async function transcribeRecording(meetingId: string) {
   await ensureAsr()
   const chunks = await db.audio.where('[meetingId+seq]').between([meetingId, -Infinity], [meetingId, Infinity]).toArray()
   if (!chunks.length) throw new Error(getT().meeting.noAudio)
   await db.segments.where('meetingId').equals(meetingId).filter((s) => s.source === 'asr' && !s.edited).delete()
   const pcm = await pcm16BlobsToFloat(chunks.map((c) => c.pcm))
-  patch({ offline: 0 })
-  await new Promise<void>((resolve) => {
-    onOffline = (m) => {
-      if (m.type === 'final' && m.text) db.segments.add({ id: uid(), meetingId, startMs: m.startMs, endMs: m.endMs, text: m.text, source: 'asr' })
-      if (m.type === 'progress') patch({ offline: m.doneMs / m.totalMs })
-      if (m.type === 'transcribed' || m.type === 'error') { onOffline = null; resolve() }
-    }
-    send({ type: 'transcribe', pcm, offsetMs: chunks[0].startMs }, [pcm.buffer])
-  })
-  patch({ offline: undefined })
+  await transcribePcm(meetingId, pcm, chunks[0].startMs)
 }

@@ -300,3 +300,16 @@ PWA (kimookpong.github.io) ──► meetingcraft-typhoon-proxy.thasaladev.worke
 - แอปสร้าง provider “Typhoon (ผ่าน meetingCraft)” อัตโนมัติจาก `VITE_TYPHOON_PROXY_URL` ใน `.env` (URL สาธารณะ ไม่ใช่ความลับ)
 - ทดสอบจริง 24 พ.ย. 2026: ASR ผ่าน proxy 0.67 วินาที/เสียง 8 วินาที, chat streaming, voice chat e2e (fake mic → proxy → Typhoon ASR + LLM → บันทึกโน้ต) ผ่าน
 - ข้อจำกัด: origin ปลอมได้จากสคริปต์นอกเบราว์เซอร์ → พึ่ง rate limit; เพิ่ม Cloudflare Turnstile ได้ถ้าพบการใช้ผิด
+
+## 15. ใช้ร่วมกับ Zoom / Google Meet
+
+| แนวทาง | สถานะ | ทำงานอย่างไร |
+|---|---|---|
+| มือถือวางข้างลำโพง | ใช้ได้เดิม | ไมค์ได้ยินเสียงลำโพง (ใช้ไม่ได้ถ้าใส่หูฟัง) |
+| **โหมดประชุมออนไลน์** | ทำแล้ว | `getDisplayMedia` (แชร์แท็บ/หน้าจอพร้อมเสียง) + `getUserMedia` (ไมค์) → รวมใน AudioWorklet เดียว → VAD → Typhoon ASR; หยุดแชร์ = หยุดบันทึก + เสนอคุยสรุป |
+| **นำเข้าไฟล์บันทึก** | ทำแล้ว | `OfflineAudioContext(16 kHz).decodeAudioData` → mono → เก็บเป็นชิ้นละ 10 นาที → VAD + รวมเป็นคำขอ ~25 วินาที → Typhoon ASR (retry 429 ตาม Retry-After) |
+| Zoom RTMS / Meet Media API | ยังไม่ทำ | ต้องมี backend รับเสียง + OAuth/การอนุมัติแพลตฟอร์ม ขัดกับหลัก local-first |
+
+- Proxy แยก rate limit: ถอดเสียง 60 ครั้ง/นาที/IP, แชท 30 ครั้ง/นาที/IP
+- ทดสอบ e2e (24 พ.ย. 2026): นำเข้า .m4a 31.6 วินาที (AAC stereo 44.1 kHz) → ถอดเสียง 2 คำขอ ใช้เวลา 1.6 วินาที; โหมดออนไลน์ใน Chrome จริง (แท็บจำลองที่เล่นเสียงไทย) → ถอดเสียงสด 4 ช่วงครบทั้ง 3 วาระ และขึ้นหน้าต่างคุยสรุปหลังหยุด
+- ข้อสังเกตการทดสอบ: headless Chrome ได้เสียงแท็บเป็นความเงียบ และ flag `--use-fake-device-for-media-stream` จะแทนที่การแชร์แท็บด้วยสัญญาณปลอม ต้องทดสอบด้วย Chrome แบบมีหน้าต่างและไม่ใช้ flag นั้น

@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { TopBar } from '../components/ui'
 import { AsrSection } from './settings/AsrSection'
+import { Logo } from '../components/Logo'
 import { ModelsSection } from './settings/ModelsSection'
 import { AiSection } from './settings/AiSection'
 import { TtsSection } from './settings/TtsSection'
@@ -23,6 +24,7 @@ export function SettingsPage() {
         <PromptSection />
         <StorageSection />
         <section className="mb-8 px-1 text-xs leading-relaxed text-slate-500">
+          <Logo size={28} className="mb-3" />
           <p className="mb-1 font-semibold">ความเป็นส่วนตัว</p>
           <p>meetingCraft ไม่มีเซิร์ฟเวอร์ของตัวเอง ข้อมูลการประชุม เสียง รูป และ API key ถูกเก็บใน IndexedDB ของเบราว์เซอร์บนอุปกรณ์นี้ OCR และเสียงอ่านทำงานในเครื่อง ส่วนการถอดเสียงจะส่งช่วงเสียงสั้น ๆ ไปที่ Typhoon และการสรุปจะส่งข้อความไปที่ AI ที่คุณเลือก</p>
           <p className="mt-2">โมเดล: Typhoon ASR/LLM โดย SCB 10X • OpenThai2.1 OCR Text (Apache-2.0) โดย iApp • MakHam TTS (Apache-2.0) โดย PyThaiNLP</p>

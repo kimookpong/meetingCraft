@@ -72,7 +72,7 @@ export function DocumentsTab({ meeting }: { meeting: Meeting }) {
       </div>
 
       {working && (
-        <div className="mb-4 flex items-center gap-3 rounded-2xl bg-brand-50 px-4 py-3 text-[15px] font-medium text-brand-900 dark:bg-brand-900/30 dark:text-brand-100" role="status">
+        <div className="mb-4 flex items-center gap-3 rounded-2xl bg-brand-50 px-4 py-3 text-[15px] font-medium text-brand-900" role="status">
           <Spinner className="h-5 w-5" />{working}
         </div>
       )}
@@ -87,10 +87,10 @@ export function DocumentsTab({ meeting }: { meeting: Meeting }) {
         {docs?.map((d) => (
           <li key={d.id}>
             <button className="card block w-full overflow-hidden p-0 text-left transition-colors duration-200 hover:border-brand-200" onClick={() => setOpen(d)}>
-              <Thumb blob={d.image} alt={d.title} className="aspect-[3/4] w-full bg-slate-100 object-cover dark:bg-slate-800" />
+              <Thumb blob={d.image} alt={d.title} className="aspect-[3/4] w-full bg-slate-100 object-cover" />
               <div className="p-3">
                 <div className="truncate text-[15px] font-semibold">{d.title}</div>
-                <div className="line-clamp-2 text-[13px] text-slate-600 dark:text-slate-400">{d.text || 'ยังไม่ได้อ่านข้อความ'}</div>
+                <div className="line-clamp-2 text-[13px] text-slate-600">{d.text || 'ยังไม่ได้อ่านข้อความ'}</div>
               </div>
             </button>
           </li>
@@ -125,7 +125,7 @@ function DocSheet({ doc, onClose, canOcr }: { doc: DocumentItem; onClose: () => 
     <Sheet open onClose={onClose} title="รายละเอียดเอกสาร" footer={<button className="btn-primary w-full" onClick={save}>บันทึก</button>}>
       <label htmlFor="doc-title" className="label">ชื่อเอกสาร</label>
       <input id="doc-title" className="input mb-4" value={title} onChange={(e) => setTitle(e.target.value)} />
-      <button className="relative mb-1 block w-full overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800" onClick={() => setShowBoxes(!showBoxes)} aria-pressed={showBoxes}>
+      <button className="relative mb-1 block w-full overflow-hidden rounded-2xl border border-slate-200" onClick={() => setShowBoxes(!showBoxes)} aria-pressed={showBoxes}>
         <Thumb blob={doc.image} alt={title} className="w-full" />
         {showBoxes && <BoxOverlay doc={{ ...doc, lines }} onDims={setDims} dims={dims} />}
       </button>

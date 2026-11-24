@@ -42,7 +42,7 @@ export function FeedbackHost() {
             <button autoFocus className={`flex-1 ${ask?.danger ? 'btn-danger' : 'btn-primary'}`} onClick={() => close(true)}>{ask?.ok}</button>
           </div>
         }>
-        {ask?.body && <p className="pb-2 text-[15px] text-slate-700 dark:text-slate-300">{ask.body}</p>}
+        {ask?.body && <p className="pb-2 text-[15px] text-slate-700">{ask.body}</p>}
       </Sheet>
     </>
   )

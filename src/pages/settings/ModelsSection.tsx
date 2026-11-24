@@ -26,7 +26,7 @@ export function ModelsSection() {
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="chip">{USE[k]}</span>
-                    {s.status === 'ready' && <span className="chip bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">พร้อมใช้</span>}
+                    {s.status === 'ready' && <span className="chip bg-emerald-100 text-emerald-800">พร้อมใช้</span>}
                   </div>
                   <div className="mt-1.5 font-medium">{spec.label}</div>
                   <div className="text-sm text-slate-500">{spec.description}</div>

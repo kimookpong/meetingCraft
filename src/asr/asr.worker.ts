@@ -175,7 +175,11 @@ self.onmessage = async (e: MessageEvent<AsrIn>) => {
     switch (m.type) {
       case 'init': init(m.cloud); break
       case 'audio': pushAudio(m.pcm); break
-      case 'flush': if (utterLen) closeUtterance(); break
+      case 'flush':
+        if (utterLen) closeUtterance()
+        while (busy || finals.length) await new Promise((r) => setTimeout(r, 50))
+        post({ type: 'flushed' })
+        break
       case 'reset':
         offsetMs = m.offsetMs; totalSamples = 0; carry = new Float32Array(0); utter = []; utterLen = 0
         preroll.length = 0; prerollLen = 0

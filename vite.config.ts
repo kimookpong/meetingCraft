@@ -17,11 +17,12 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'prompt',
-      includeAssets: ['icon.svg', 'favicon.ico', 'apple-touch-icon-180x180.png'],
+      includeAssets: ['icon.svg', 'logo.svg', 'favicon.ico', 'apple-touch-icon-180x180.png', 'og-image.png', 'robots.txt', 'sitemap.xml'],
       manifest: {
+        id: './',
         name: 'meetingCraft — บันทึกการประชุม',
         short_name: 'meetingCraft',
-        description: 'บันทึกการประชุม ถอดเสียงภาษาไทย สแกนเอกสาร และสรุปด้วย AI — ข้อมูลอยู่บนเครื่องคุณ',
+        description: 'บันทึกการประชุม ถอดเสียงภาษาไทย สแกนเอกสาร สรุปด้วย AI และคุยถามตอบด้วยเสียง — ข้อมูลอยู่บนเครื่องคุณ',
         lang: 'th',
         start_url: './',
         scope: './',

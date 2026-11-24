@@ -48,7 +48,7 @@ export function TranscriptTab({ meeting, live }: { meeting: Meeting; live: boole
 
       {!!segs?.length && (
         <div className="mb-3 flex items-center justify-between">
-          <p className="text-[13px] text-slate-600 dark:text-slate-400">แตะข้อความเพื่อแก้คำที่ถอดผิดได้</p>
+          <p className="text-[13px] text-slate-600">แตะข้อความเพื่อแก้คำที่ถอดผิดได้</p>
           <button className="btn-soft min-h-10 px-3.5 text-sm" onClick={() => (reading ? stopSpeaking() : speak(segs.map((s) => s.text).join(' '), 'transcript'))}>
             <IconSpeaker width={18} /> {reading ? 'หยุดอ่าน' : 'ฟัง'}
           </button>
@@ -57,10 +57,10 @@ export function TranscriptTab({ meeting, live }: { meeting: Meeting; live: boole
 
       <ol className="space-y-2">
         {segs?.map((s) => (
-          <li key={s.id} className={`rounded-2xl px-3.5 py-3 transition-colors duration-200 ${s.source === 'manual' ? 'bg-accent-50 dark:bg-accent-700/15' : 'bg-white dark:bg-slate-900'} border border-slate-200/70 dark:border-slate-800`}>
-            <div className="mb-1 flex items-center gap-2 text-[12px] font-semibold text-slate-500 dark:text-slate-400">
+          <li key={s.id} className={`rounded-2xl px-3.5 py-3 transition-colors duration-200 ${s.source === 'manual' ? 'bg-accent-50' : 'bg-white'} border border-slate-200/70`}>
+            <div className="mb-1 flex items-center gap-2 text-[12px] font-semibold text-slate-500">
               <span className="font-mono tabular-nums">{fmtClock(s.startMs)}</span>
-              {s.source === 'manual' && <span className="text-accent-700 dark:text-accent-400">· จดเอง</span>}
+              {s.source === 'manual' && <span className="text-accent-700">· จดเอง</span>}
               {s.edited && <span>· แก้ไขแล้ว</span>}
             </div>
             {editing === s.id ? (
@@ -72,13 +72,13 @@ export function TranscriptTab({ meeting, live }: { meeting: Meeting; live: boole
           </li>
         ))}
         {live && rec.partial && (
-          <li className="rounded-2xl border border-dashed border-brand-200 bg-brand-50/60 px-3.5 py-3 dark:border-brand-900 dark:bg-brand-900/20" aria-live="polite">
-            <div className="mb-1 text-[12px] font-semibold text-brand-700 dark:text-brand-200">กำลังฟัง…</div>
-            <p className="text-[16px] leading-relaxed text-slate-600 dark:text-slate-300">{rec.partial}</p>
+          <li className="rounded-2xl border border-dashed border-brand-200 bg-brand-50/60 px-3.5 py-3" aria-live="polite">
+            <div className="mb-1 text-[12px] font-semibold text-brand-700">กำลังฟัง…</div>
+            <p className="text-[16px] leading-relaxed text-slate-600">{rec.partial}</p>
           </li>
         )}
         {live && !rec.partial && rec.asr === 'ready' && !segs?.length && (
-          <li className="py-6 text-center text-[15px] text-slate-600 dark:text-slate-400">{rec.speaking ? 'ได้ยินแล้ว กำลังพิมพ์…' : 'พูดได้เลย ระบบกำลังฟังอยู่'}</li>
+          <li className="py-6 text-center text-[15px] text-slate-600">{rec.speaking ? 'ได้ยินแล้ว กำลังพิมพ์…' : 'พูดได้เลย ระบบกำลังฟังอยู่'}</li>
         )}
       </ol>
       <div ref={endRef} />

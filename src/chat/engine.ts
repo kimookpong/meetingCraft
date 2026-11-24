@@ -8,7 +8,7 @@ import { db, getSetting, touchMeeting, type AiProviderConfig, type Meeting } fro
 import { asrSend, captureWorkletUrl, ensureAsr, onAsrMessage, recorder } from '../asr/recorder'
 import { createProvider } from '../ai/registry'
 import { primeTts, speak, stopSpeaking, waitSpeechEnd } from '../tts/player'
-import { CHAT_SYSTEM, buildChatPrompt, parseReply, visibleWhileStreaming, type Turn } from './prompt'
+import { CHAT_SYSTEM, DEBRIEF_REQUEST, buildChatPrompt, parseReply, visibleWhileStreaming, type Turn } from './prompt'
 
 export type Phase = 'off' | 'starting' | 'listening' | 'hearing' | 'thinking' | 'speaking'
 export interface ChatState {
@@ -45,13 +45,14 @@ async function pickProvider(): Promise<AiProviderConfig> {
   return p
 }
 
-export async function openChat(m: Meeting, opts: { listen: boolean }) {
+export async function openChat(m: Meeting, opts: { listen: boolean; debrief?: boolean }) {
   if (recorder.get().status !== 'idle') throw new Error('ปิดการบันทึกก่อน แล้วค่อยคุยกับผู้ช่วย')
   primeTts() // must run inside the user's tap for iOS audio
   // Mic context too: created before any await so it isn't born "suspended".
   const early = opts.listen ? new AudioContext() : undefined
   early?.resume()
-  if (lastMeetingId !== m.id) chat.set((s) => ({ ...s, turns: [] })) // conversations are per meeting
+  // Conversations are per meeting; a debrief always starts fresh.
+  if (lastMeetingId !== m.id || opts.debrief) chat.set((s) => ({ ...s, turns: [] }))
   lastMeetingId = m.id
   meeting = m
   const my = ++session
@@ -62,6 +63,8 @@ export async function openChat(m: Meeting, opts: { listen: boolean }) {
     patch({ provider: cfg.label })
     if (opts.listen) await startMic(early)
     else patch({ phase: 'listening' })
+    // Post-meeting debrief: the assistant speaks first with a short recap.
+    if (opts.debrief && my === session && !chat.get().turns.length) await respond(DEBRIEF_REQUEST, false)
   } catch (e) {
     early?.close()
     patch({ phase: 'off', error: (e as Error).message })
@@ -114,14 +117,16 @@ function unmuteMic() {
 }
 
 /** Ask a question (spoken or typed). */
-export async function ask(text: string) {
+export const ask = (text: string) => respond(text, true)
+
+async function respond(text: string, fromUser: boolean) {
   if (!meeting || !cfg || !text.trim()) return
   muteMic()
   stopSpeaking()
   abort?.abort()
   abort = new AbortController()
   const history = chat.get().turns
-  patch({ phase: 'thinking', partial: '', draft: '', error: undefined, turns: [...history, { role: 'user', text }] })
+  patch({ phase: 'thinking', partial: '', draft: '', error: undefined, turns: fromUser ? [...history, { role: 'user', text }] : history })
   try {
     const fresh = (await db.meetings.get(meeting.id)) ?? meeting
     const prompt = await buildChatPrompt(fresh, history, text, cfg.chunkChars ?? 24000)

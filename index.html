@@ -3,22 +3,77 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#fbfaf7" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#020617" media="(prefers-color-scheme: dark)" />
+    <title>meetingCraft — บันทึกการประชุม ถอดเสียงภาษาไทย และสรุปด้วย AI</title>
+    <meta name="description" content="แอปจดบันทึกการประชุมภาษาไทย: ถอดเสียงอัตโนมัติแบบเรียลไทม์ สแกนเอกสารด้วย OCR สรุปมติและงานที่ต้องทำด้วย AI และคุยถามตอบด้วยเสียง ใช้ฟรีบนมือถือ ข้อมูลเก็บในเครื่องของคุณ" />
+    <meta name="keywords" content="บันทึกการประชุม, ถอดเสียงภาษาไทย, สรุปการประชุม, รายงานการประชุม, AI ภาษาไทย, Typhoon, OCR ภาษาไทย, meeting notes, Thai speech to text" />
+    <meta name="author" content="meetingCraft" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <link rel="canonical" href="%VITE_SITE_URL%" />
+
+    <meta name="application-name" content="meetingCraft" />
+    <meta name="apple-mobile-web-app-title" content="meetingCraft" />
+    <meta name="theme-color" content="#fbfaf7" />
+    <meta name="color-scheme" content="light" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="description" content="บันทึกการประชุม ถอดเสียงภาษาไทย สแกนเอกสาร และสรุปด้วย AI — ข้อมูลอยู่บนเครื่องคุณ" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="format-detection" content="telephone=no" />
+
+    <!-- Open Graph / Facebook / LINE -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="meetingCraft" />
+    <meta property="og:locale" content="th_TH" />
+    <meta property="og:url" content="%VITE_SITE_URL%" />
+    <meta property="og:title" content="meetingCraft — จดประชุมแทนคุณ ถอดเสียงไทยและสรุปด้วย AI" />
+    <meta property="og:description" content="กดไมค์แล้วคุยตามปกติ ได้ข้อความภาษาไทย มติที่ประชุม และงานที่ต้องทำ พร้อมผู้รับผิดชอบ — ใช้ฟรีบนมือถือ" />
+    <meta property="og:image" content="%VITE_SITE_URL%og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="meetingCraft — บันทึกการประชุม ถอดเสียงภาษาไทย และสรุปด้วย AI" />
+
+    <!-- Twitter / X -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="meetingCraft — จดประชุมแทนคุณ ถอดเสียงไทยและสรุปด้วย AI" />
+    <meta name="twitter:description" content="ถอดเสียงภาษาไทยแบบเรียลไทม์ สรุปมติและงานที่ต้องทำ คุยถามตอบด้วยเสียง ใช้ฟรีบนมือถือ" />
+    <meta name="twitter:image" content="%VITE_SITE_URL%og-image.png" />
+
     <link rel="icon" href="./favicon.ico" sizes="48x48" />
     <link rel="icon" href="./icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="./apple-touch-icon-180x180.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai+Looped:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    <title>meetingCraft</title>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai+Looped:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "meetingCraft",
+        "url": "%VITE_SITE_URL%",
+        "image": "%VITE_SITE_URL%og-image.png",
+        "description": "แอปจดบันทึกการประชุมภาษาไทย ถอดเสียงอัตโนมัติ สแกนเอกสาร สรุปด้วย AI และคุยถามตอบด้วยเสียง ข้อมูลเก็บในเครื่องผู้ใช้",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "Web, Android, iOS, Windows, macOS",
+        "inLanguage": "th",
+        "browserRequirements": "Requires a modern browser with JavaScript and microphone access",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "THB" },
+        "featureList": [
+          "ถอดเสียงภาษาไทยแบบเรียลไทม์",
+          "สรุปมติที่ประชุมและงานที่ต้องทำด้วย AI",
+          "สแกนเอกสารประกอบด้วย OCR ภาษาไทย",
+          "คุยถามตอบและสั่งจดบันทึกด้วยเสียง",
+          "อ่านออกเสียงสรุปการประชุม",
+          "ติดตั้งเป็นแอป (PWA) และใช้งานบนมือถือ"
+        ]
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      <h1>meetingCraft — บันทึกการประชุม ถอดเสียงภาษาไทย และสรุปด้วย AI</h1>
+      <p>แอปจดบันทึกการประชุมภาษาไทย ถอดเสียงอัตโนมัติ สแกนเอกสาร สรุปมติและงานที่ต้องทำด้วย AI และคุยถามตอบด้วยเสียง กรุณาเปิดใช้ JavaScript เพื่อใช้งาน</p>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

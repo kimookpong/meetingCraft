@@ -10,6 +10,7 @@ import { IconCamera, IconCheck, IconChevron, IconClock, IconDoc, IconMic, IconPi
 import { fmtBytes, fmtClock, relDay } from '../lib/format'
 import { useAsrConfig } from '../asr/recorder'
 import { startNewMeeting } from '../lib/actions'
+import { Logo } from '../components/Logo'
 
 function greeting() {
   const h = new Date().getHours()
@@ -47,15 +48,19 @@ export function MeetingsPage() {
 
   return (
     <div className="min-h-dvh pb-32">
-      <header className="pt-safe mx-auto max-w-2xl px-5 pt-6">
-        <p className="text-[15px] font-medium text-slate-600 dark:text-slate-400">{greeting()}</p>
+      <header className="pt-safe mx-auto max-w-2xl px-5 pt-5">
+        <div className="mb-4 flex items-center justify-between">
+          <Logo size={34} />
+          <span className="chip bg-emerald-50 text-emerald-700"><IconShield width={14} />ข้อมูลอยู่ในเครื่อง</span>
+        </div>
+        <p className="text-[15px] font-medium text-slate-600">{greeting()}</p>
         <h1 className="text-[26px] leading-tight font-bold">วันนี้มีประชุมอะไรบ้าง?</h1>
       </header>
 
       <main className="mx-auto max-w-2xl px-4 pt-4">
         {/* Primary action, big and obvious */}
         <div className="relative mb-4 overflow-hidden rounded-[1.5rem] bg-brand-600 p-5 text-white">
-          <ArtWave className="absolute -right-4 -bottom-1 h-16 w-48 opacity-30" />
+          <ArtWave className="pointer-events-none absolute top-4 right-4 h-10 w-32 opacity-25" />
           <div className="relative">
             <div className="text-lg font-bold">เริ่มประชุมใหม่</div>
             <p className="mt-0.5 max-w-[16rem] text-[14px] text-brand-100">กดแล้วพูดได้เลย ระบบจะถอดเสียงและช่วยสรุปให้</p>
@@ -79,38 +84,38 @@ export function MeetingsPage() {
         {meetings && !hasAny && (
           <Empty art={<ArtRecord />} title="ยังไม่มีบันทึกการประชุม">
             ลองกดปุ่มไมค์สีน้ำเงินด้านล่างดูสิ — แค่วางมือถือไว้กลางโต๊ะ แล้วคุยกันตามปกติ
-            <div className="mt-4 flex items-center justify-center gap-1.5 text-[13px] font-medium text-emerald-700 dark:text-emerald-400">
+            <div className="mt-4 flex items-center justify-center gap-1.5 text-[13px] font-medium text-emerald-700">
               <IconShield width={16} /> บันทึกทั้งหมดเก็บไว้ในเครื่องนี้
             </div>
           </Empty>
         )}
 
         {hasAny && groups.length === 0 && (
-          <p className="py-10 text-center text-slate-600 dark:text-slate-400">ไม่พบการประชุมที่ตรงกับ “{q}”</p>
+          <p className="py-10 text-center text-slate-600">ไม่พบการประชุมที่ตรงกับ “{q}”</p>
         )}
 
         {groups.map(([day, list]) => (
           <section key={day} className="mb-6">
-            <h2 className="mb-2 px-1 text-sm font-bold text-slate-600 dark:text-slate-400">{day}</h2>
+            <h2 className="mb-2 px-1 text-sm font-bold text-slate-600">{day}</h2>
             <ul className="space-y-2.5">
               {list.map((m) => {
                 const c = counts?.[m.id]
                 return (
                   <li key={m.id}>
-                    <Link href={`/m/${m.id}`} className="card flex items-center gap-3.5 transition-colors duration-200 hover:border-brand-200 hover:bg-brand-50/40 dark:hover:bg-slate-800/60">
-                      <div className={`grid h-12 w-12 shrink-0 place-items-center rounded-2xl ${m.status === 'recording' ? 'bg-rose-100 text-rose-600 dark:bg-rose-950 dark:text-rose-300' : c?.y ? 'bg-accent-100 text-accent-700 dark:bg-accent-700/25 dark:text-accent-100' : 'bg-brand-50 text-brand-600 dark:bg-brand-900/40 dark:text-brand-200'}`}>
+                    <Link href={`/m/${m.id}`} className="card flex items-center gap-3.5 transition-colors duration-200 hover:border-brand-200 hover:bg-brand-50/40">
+                      <div className={`grid h-12 w-12 shrink-0 place-items-center rounded-2xl ${m.status === 'recording' ? 'bg-rose-100 text-rose-600' : c?.y ? 'bg-accent-100 text-accent-700' : 'bg-brand-50 text-brand-600'}`}>
                         {m.status === 'recording' ? <IconMic /> : c?.y ? <IconSparkles /> : <IconDoc />}
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-[16px] font-semibold">{m.title}</div>
-                        <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[13px] text-slate-600 dark:text-slate-400">
+                        <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[13px] text-slate-600">
                           <span className="inline-flex items-center gap-1"><IconClock width={14} />{new Date(m.startedAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.{m.durationMs > 0 && ` · ${fmtClock(m.durationMs)}`}</span>
                           {m.location && <span className="inline-flex items-center gap-1"><IconPin width={14} />{m.location}</span>}
                           {m.attendees.length > 0 && <span className="inline-flex items-center gap-1"><IconUsers width={14} />{m.attendees.length} คน</span>}
                         </div>
                         <div className="mt-1.5 flex flex-wrap gap-1.5">
-                          {m.status === 'recording' && <span className="chip bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300">กำลังบันทึก</span>}
-                          {c?.y && <span className="chip bg-accent-100 text-accent-700 dark:bg-accent-700/25 dark:text-accent-100">สรุปแล้ว</span>}
+                          {m.status === 'recording' && <span className="chip bg-rose-100 text-rose-700">กำลังบันทึก</span>}
+                          {c?.y && <span className="chip bg-accent-100 text-accent-700">สรุปแล้ว</span>}
                           {!!c?.d && <span className="chip">{c.d} เอกสาร</span>}
                           {!c?.s && !c?.d && m.status !== 'recording' && <span className="chip">ยังว่างอยู่</span>}
                         </div>
@@ -148,16 +153,16 @@ function SetupChecklist() {
     <section className="card mb-2" aria-labelledby="setup-title">
       <div className="mb-1 flex items-center justify-between">
         <h2 id="setup-title" className="font-bold">เตรียมความพร้อม</h2>
-        <span className="text-[13px] font-semibold text-brand-700 dark:text-brand-200">{ready}/{total} เสร็จแล้ว</span>
+        <span className="text-[13px] font-semibold text-brand-700">{ready}/{total} เสร็จแล้ว</span>
       </div>
       <p className="hint mb-3 mt-0">ทำครั้งเดียว ใช้ได้ทุกการประชุม</p>
       <Progress value={ready / total} className="mb-3" label="ความพร้อมของระบบ" />
-      <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+      <ul className="divide-y divide-slate-100">
         <li className="flex min-h-14 items-center gap-3 py-2">
           <StepDot done={typhoon} />
           <div className="min-w-0 flex-1">
             <div className="text-[15px] font-semibold">เชื่อมต่อ Typhoon</div>
-            <div className="text-[13px] text-slate-600 dark:text-slate-400">ถอดเสียง สรุป และคุยกับผู้ช่วย · ใช้ฟรี</div>
+            <div className="text-[13px] text-slate-600">ถอดเสียง สรุป และคุยกับผู้ช่วย · ใช้ฟรี</div>
           </div>
           {!typhoon && <Link href="/settings" onClick={() => sessionStorage.setItem('settings:focus', 'asr')} className="btn-soft min-h-10 px-4 text-sm">เชื่อมต่อ</Link>}
         </li>
@@ -173,7 +178,7 @@ function SetupChecklist() {
 function StepDot({ done }: { done: boolean }) {
   return done
     ? <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-emerald-500 text-white"><IconCheck width={16} /></span>
-    : <span className="h-7 w-7 shrink-0 rounded-full border-2 border-dashed border-slate-300 dark:border-slate-600" />
+    : <span className="h-7 w-7 shrink-0 rounded-full border-2 border-dashed border-slate-300" />
 }
 
 function StepRow({ k, title, desc, state }: { k: ModelKey; title: string; desc: string; state: ModelState }) {
@@ -184,8 +189,8 @@ function StepRow({ k, title, desc, state }: { k: ModelKey; title: string; desc: 
       <div className="min-w-0 flex-1">
         <div className="text-[15px] font-semibold">{title}</div>
         {state.status === 'downloading'
-          ? <div className="mt-1"><Progress value={state.loaded / state.total} label={`ดาวน์โหลด${title}`} /><div className="mt-0.5 text-[12px] text-slate-600 dark:text-slate-400">{fmtBytes(state.loaded)} จาก {fmtBytes(state.total)}</div></div>
-          : <div className="text-[13px] text-slate-600 dark:text-slate-400">{state.status === 'error' ? 'ดาวน์โหลดสะดุด — กดเพื่อทำต่อ' : `${desc} · ${size}`}</div>}
+          ? <div className="mt-1"><Progress value={state.loaded / state.total} label={`ดาวน์โหลด${title}`} /><div className="mt-0.5 text-[12px] text-slate-600">{fmtBytes(state.loaded)} จาก {fmtBytes(state.total)}</div></div>
+          : <div className="text-[13px] text-slate-600">{state.status === 'error' ? 'ดาวน์โหลดสะดุด — กดเพื่อทำต่อ' : `${desc} · ${size}`}</div>}
       </div>
       {(state.status === 'absent' || state.status === 'error') && (
         <button className="btn-soft min-h-10 px-4 text-sm" onClick={() => downloadModel(k).catch(() => {})}>ดาวน์โหลด</button>

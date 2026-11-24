@@ -16,3 +16,5 @@ export type AsrOut =
   | { type: 'final'; startMs: number; endMs: number; text: string; rtf: number }
   | { type: 'progress'; doneMs: number; totalMs: number }
   | { type: 'transcribed' }
+  /** All pending utterances after a 'flush' have been transcribed (or failed). */
+  | { type: 'flushed' }

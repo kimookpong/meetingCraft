@@ -30,7 +30,8 @@ export function MeetingPage({ id }: { id: string }) {
   const [details, setDetails] = useState(false)
   const [menu, setMenu] = useState(false)
   const [busy, setBusy] = useState('')
-  const [talk, setTalk] = useState(false)
+  const [talk, setTalk] = useState<false | 'chat' | 'debrief'>(false)
+  const [offer, setOffer] = useState(false)
   const rec = recorder.use()
   const asr = useAsrConfig()
 
@@ -68,25 +69,25 @@ export function MeetingPage({ id }: { id: string }) {
         <button onClick={() => setDetails(true)} className="mb-3 flex w-full flex-wrap items-center gap-2 rounded-2xl text-left">
           <span className="chip min-h-8 px-3"><IconPin width={14} />{meeting.location || 'เพิ่มสถานที่'}</span>
           <span className="chip min-h-8 px-3"><IconUsers width={14} />{meeting.attendees.length ? `${meeting.attendees.length} คน` : 'เพิ่มผู้เข้าร่วม'}</span>
-          <span className="chip min-h-8 bg-brand-50 px-3 text-brand-700 dark:bg-brand-900/40 dark:text-brand-200"><IconPen width={14} />แก้ไขรายละเอียด</span>
+          <span className="chip min-h-8 bg-brand-50 px-3 text-brand-700"><IconPen width={14} />แก้ไขรายละเอียด</span>
         </button>
-        <button onClick={() => (isRecordingHere || rec.status !== 'idle' ? toast('หยุดบันทึกก่อน แล้วค่อยคุยกับผู้ช่วย', 'info') : setTalk(true))}
-          className="mb-3 flex min-h-14 w-full items-center gap-3 rounded-2xl bg-accent-50 px-4 text-left transition-colors duration-200 hover:bg-accent-100 dark:bg-accent-700/15 dark:hover:bg-accent-700/25">
+        <button onClick={() => (isRecordingHere || rec.status !== 'idle' ? toast('หยุดบันทึกก่อน แล้วค่อยคุยกับผู้ช่วย', 'info') : setTalk('chat'))}
+          className="mb-3 flex min-h-14 w-full items-center gap-3 rounded-2xl bg-accent-50 px-4 text-left transition-colors duration-200 hover:bg-accent-100">
           <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-accent-500 text-white"><IconSparkles width={20} /></span>
           <span className="min-w-0 flex-1">
-            <span className="block text-[15px] font-bold text-accent-700 dark:text-accent-100">คุยกับผู้ช่วย</span>
-            <span className="block truncate text-[13px] text-slate-600 dark:text-slate-400">ถามเรื่องในประชุม หรือสั่งให้บันทึกเพิ่ม ด้วยเสียง</span>
+            <span className="block text-[15px] font-bold text-accent-700">คุยกับผู้ช่วย</span>
+            <span className="block truncate text-[13px] text-slate-600">ถามเรื่องในประชุม หรือสั่งให้บันทึกเพิ่ม ด้วยเสียง</span>
           </span>
         </button>
       </div>
 
-      <div className="sticky top-[calc(env(safe-area-inset-top)+4rem)] z-20 bg-canvas/90 backdrop-blur dark:bg-slate-950/90">
+      <div className="sticky top-[calc(env(safe-area-inset-top)+4rem)] z-20 bg-canvas/90 backdrop-blur">
         <div className="mx-auto max-w-2xl px-4 py-2">
-          <div className="flex gap-1 rounded-2xl bg-slate-200/60 p-1 dark:bg-slate-800/70" role="tablist" aria-label="ส่วนของการประชุม">
+          <div className="flex gap-1 rounded-2xl bg-slate-200/60 p-1" role="tablist" aria-label="ส่วนของการประชุม">
             {tabs.map(([k, label, icon, n]) => (
               <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
-                className={`flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-xl text-[15px] font-semibold whitespace-nowrap transition-colors duration-200 ${tab === k ? 'bg-white text-brand-700 shadow-sm dark:bg-slate-900 dark:text-brand-200' : 'text-slate-600 dark:text-slate-400'}`}>
-                <span className="hidden min-[400px]:inline">{icon}</span>{label}{!!n && <span className={`rounded-full px-1.5 text-[11px] ${tab === k ? 'bg-brand-100 dark:bg-brand-900/50' : 'bg-slate-300/70 dark:bg-slate-700'}`}>{n}</span>}
+                className={`flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-xl text-[15px] font-semibold whitespace-nowrap transition-colors duration-200 ${tab === k ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-600'}`}>
+                <span className="hidden min-[400px]:inline">{icon}</span>{label}{!!n && <span className={`rounded-full px-1.5 text-[11px] ${tab === k ? 'bg-brand-100' : 'bg-slate-300/70'}`}>{n}</span>}
               </button>
             ))}
           </div>
@@ -94,7 +95,7 @@ export function MeetingPage({ id }: { id: string }) {
       </div>
 
       {busy && (
-        <div className="mx-auto flex max-w-2xl items-center gap-2 px-5 pt-2 text-sm font-medium text-brand-700 dark:text-brand-200" role="status">
+        <div className="mx-auto flex max-w-2xl items-center gap-2 px-5 pt-2 text-sm font-medium text-brand-700" role="status">
           <Spinner className="h-4 w-4" />{busy}{rec.offline !== undefined && ` ${Math.round(rec.offline * 100)}%`}
         </div>
       )}
@@ -103,10 +104,27 @@ export function MeetingPage({ id }: { id: string }) {
         {tab === 'docs' && <DocumentsTab meeting={meeting} />}
         {tab === 'summary' && <SummaryTab meeting={meeting} onGoTranscript={() => setTab('transcript')} />}
       </main>
-      <RecordDock meeting={meeting} />
+      <RecordDock meeting={meeting} onStopped={async () => {
+        // Offer a spoken debrief when something was actually captured.
+        const n = await db.segments.where('meetingId').equals(id).count()
+        if (n > 0) setOffer(true)
+        else toast('บันทึกเสียงเรียบร้อย')
+      }} />
+      <Sheet open={offer} onClose={() => setOffer(false)} title="บันทึกเสร็จแล้ว">
+        <div className="pb-2 text-center">
+          <div className="mx-auto mb-3 grid h-16 w-16 place-items-center rounded-2xl bg-accent-100 text-accent-700"><IconSparkles width={30} height={30} /></div>
+          <p className="text-[16px] font-semibold">คุยสรุปกับผู้ช่วยด้วยเสียงไหม?</p>
+          <p className="mx-auto mt-1 max-w-xs text-[14px] text-slate-600">ผู้ช่วยจะเล่ามติและงานที่ต้องทำให้ฟัง แล้วคุณพูดเพื่อแก้ไขหรือเพิ่มข้อมูลได้ทันที</p>
+          <div className="mt-5 flex flex-col gap-2">
+            <button className="btn-primary" onClick={() => { setOffer(false); setTalk('debrief') }}><IconSparkles /> คุยสรุปด้วยเสียง</button>
+            <button className="btn-soft" onClick={() => { setOffer(false); setTab('summary') }}>ดูสรุปแบบข้อความ</button>
+            <button className="btn-ghost text-sm" onClick={() => setOffer(false)}>ไว้ทีหลัง</button>
+          </div>
+        </div>
+      </Sheet>
 
       <DetailsSheet meeting={meeting} open={details} onClose={() => setDetails(false)} />
-      {talk && <VoiceChat meeting={meeting} onClose={() => setTalk(false)} />}
+      {talk && <VoiceChat meeting={meeting} debrief={talk === 'debrief'} onClose={() => setTalk(false)} />}
       <Sheet open={menu} onClose={() => setMenu(false)} title="ตัวเลือก">
         <div className="flex flex-col gap-1 pb-1">
           <MenuItem icon={<IconPen />} label="แก้ไขรายละเอียดการประชุม" onClick={() => { setMenu(false); setDetails(true) }} />
@@ -137,11 +155,11 @@ export function MeetingPage({ id }: { id: string }) {
 function MenuItem({ icon, label, hint, onClick, disabled, danger }: { icon: React.ReactNode; label: string; hint?: string; onClick: () => void; disabled?: boolean; danger?: boolean }) {
   return (
     <button onClick={onClick} disabled={disabled}
-      className={`flex min-h-14 items-center gap-3 rounded-2xl px-3 text-left transition-colors duration-200 hover:bg-slate-100 disabled:opacity-50 dark:hover:bg-slate-800 ${danger ? 'text-rose-600' : ''}`}>
-      <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${danger ? 'bg-rose-50 dark:bg-rose-950/50' : 'bg-slate-100 dark:bg-slate-800'}`}>{icon}</span>
+      className={`flex min-h-14 items-center gap-3 rounded-2xl px-3 text-left transition-colors duration-200 hover:bg-slate-100 disabled:opacity-50 ${danger ? 'text-rose-600' : ''}`}>
+      <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${danger ? 'bg-rose-50' : 'bg-slate-100'}`}>{icon}</span>
       <span>
         <span className="block text-[15px] font-semibold">{label}</span>
-        {hint && <span className="block text-[13px] text-slate-600 dark:text-slate-400">{hint}</span>}
+        {hint && <span className="block text-[13px] text-slate-600">{hint}</span>}
       </span>
     </button>
   )

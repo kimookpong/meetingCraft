@@ -13,8 +13,8 @@ import type { ProviderPreset } from '../../ai/types'
 const badge = (p: ProviderPreset) => (
   <div className="mt-1.5 flex flex-wrap gap-1">
     <span className="chip">ไทย: {p.thai}</span>
-    <span className={`chip ${p.free.startsWith('ฟรี') ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : ''}`}>{p.free}</span>
-    <span className={`chip ${p.privacy === 'ส่งออกนอกเครื่อง' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300' : 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300'}`}>{p.privacy}</span>
+    <span className={`chip ${p.free.startsWith('ฟรี') ? 'bg-emerald-100 text-emerald-800' : ''}`}>{p.free}</span>
+    <span className={`chip ${p.privacy === 'ส่งออกนอกเครื่อง' ? 'bg-amber-100 text-amber-800' : 'bg-sky-100 text-sky-800'}`}>{p.privacy}</span>
     {p.sizeMB && <span className="chip">~{p.sizeMB >= 1000 ? `${(p.sizeMB / 1000).toFixed(1)} GB` : `${p.sizeMB} MB`}</span>}
   </div>
 )
@@ -34,7 +34,7 @@ export function AiSection() {
 
   return (
     <Section title="AI ช่วยสรุป" desc="เลือกได้หลายตัว แล้วกดวงกลมเพื่อตั้งเป็นค่าเริ่มต้น" action={<button className="btn-ghost min-h-9 px-2 text-sm text-brand-700" onClick={() => setPicker(true)}><IconPlus width={18} />เพิ่ม</button>}>
-      <div className="card divide-y divide-slate-100 p-0 dark:divide-slate-800">
+      <div className="card divide-y divide-slate-100 p-0">
         <ProviderRow label="สรุปแบบดึงประโยค (ไม่ใช้ AI)" sub="ในเครื่อง • ไม่ต้องตั้งค่า" active={def === EXTRACTIVE_ID} onDefault={() => { setDef(EXTRACTIVE_ID); setSetting('ai.default', EXTRACTIVE_ID) }} />
         {providers?.map((p) => (
           <ProviderRow key={p.id} label={p.label} sub={`${p.model}${p.baseUrl ? ` • ${new URL(p.baseUrl).host}` : ''}`} active={def === p.id}
@@ -49,7 +49,7 @@ export function AiSection() {
             const disabled = p.kind === 'onnx-local' && !webgpu
             return (
               <button key={p.key} disabled={disabled} onClick={() => addPreset(p)} className="card block w-full text-left disabled:opacity-50">
-                <div className="flex items-center gap-2 font-semibold">{p.label}{p.key === 'typhoon' && <span className="chip bg-accent-100 text-accent-700 dark:bg-accent-700/25 dark:text-accent-100">แนะนำ</span>}</div>
+                <div className="flex items-center gap-2 font-semibold">{p.label}{p.key === 'typhoon' && <span className="chip bg-accent-100 text-accent-700">แนะนำ</span>}</div>
                 <div className="text-sm text-slate-500">{disabled ? 'ต้องใช้เบราว์เซอร์ที่รองรับ WebGPU' : p.note}</div>
                 {badge(p)}
               </button>
@@ -69,7 +69,7 @@ export function AiSection() {
 function ProviderRow({ label, sub, active, onDefault, onEdit }: { label: string; sub: string; active: boolean; onDefault: () => void; onEdit?: () => void }) {
   return (
     <div className="flex items-center gap-3 px-4 py-3">
-      <button onClick={onDefault} aria-label="ตั้งเป็นค่าเริ่มต้น" className={`h-5 w-5 shrink-0 rounded-full border-2 ${active ? 'border-brand-600 bg-brand-600 shadow-[inset_0_0_0_3px_white] dark:shadow-[inset_0_0_0_3px_#0f172a]' : 'border-slate-300'}`} />
+      <button onClick={onDefault} aria-label="ตั้งเป็นค่าเริ่มต้น" className={`h-5 w-5 shrink-0 rounded-full border-2 ${active ? 'border-brand-600 bg-brand-600 shadow-[inset_0_0_0_3px_white]' : 'border-slate-300'}`} />
       <div className="min-w-0 flex-1" onClick={onEdit ?? onDefault}>
         <div className="truncate text-[15px]">{label}</div>
         <div className="truncate text-xs text-slate-500">{sub}</div>

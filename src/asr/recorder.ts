@@ -221,14 +221,32 @@ async function teardown() {
   ctx = null; stream = null; node = null; wakeLock = null
 }
 
+/** Ask the worker to transcribe whatever is still buffered and wait until it's done (max 15 s). */
+function drainAsr(): Promise<void> {
+  if (!worker) return Promise.resolve()
+  return new Promise((resolve) => {
+    const w = worker!
+    const done = () => { w.removeEventListener('message', h); clearTimeout(t); resolve() }
+    const h = (e: MessageEvent<AsrOut>) => { if (e.data.type === 'flushed') done() }
+    const t = setTimeout(done, 15000)
+    w.addEventListener('message', h)
+    send({ type: 'flush' })
+  })
+}
+
 export async function stopRecording() {
   const s = recorder.get()
   if (s.status !== 'recording' && s.status !== 'paused') return
   const meetingId = s.meetingId!
   patch({ status: 'stopping' })
   const elapsed = s.status === 'recording' ? baseMs + performance.now() - startedAt : baseMs
+  // Stop capturing first, then let the last utterance finish transcribing before detaching
+  // the segment writer — otherwise whatever was said right before "stop" was lost.
+  const writer = onFinal
   await teardown()
-  if (worker) send({ type: 'flush' })
+  onFinal = writer
+  await drainAsr()
+  onFinal = null
   await savePending(meetingId)
   await touchMeeting(meetingId, { status: 'done', durationMs: elapsed, endedAt: Date.now() })
   patch({ status: 'idle', elapsedMs: 0, level: -90, speaking: false, partial: '' })

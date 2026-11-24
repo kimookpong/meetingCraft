@@ -19,18 +19,18 @@ function BottomNav() {
   if (loc.startsWith('/m/')) return null
   const item = (href: string, label: string, icon: React.ReactNode, active: boolean) => (
     <Link href={href} aria-current={active ? 'page' : undefined}
-      className={`flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-xs font-semibold transition-colors duration-200 ${active ? 'text-brand-700 dark:text-brand-200' : 'text-slate-600 dark:text-slate-400'}`}>
+      className={`flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-xs font-semibold transition-colors duration-200 ${active ? 'text-brand-700' : 'text-slate-600'}`}>
       {icon}
       {label}
     </Link>
   )
   return (
-    <nav className="pb-safe fixed inset-x-0 bottom-0 z-30 border-t border-slate-200/80 bg-white/95 backdrop-blur-lg dark:border-slate-800 dark:bg-slate-900/95" aria-label="เมนูหลัก">
+    <nav className="pb-safe fixed inset-x-0 bottom-0 z-30 border-t border-slate-200/80 bg-white/95 backdrop-blur-lg" aria-label="เมนูหลัก">
       <div className="mx-auto flex max-w-md items-center px-4">
         {item('/', 'หน้าแรก', <IconHome />, loc === '/')}
         <div className="flex flex-1 justify-center">
           <button onClick={() => startNewMeeting(nav)} aria-label="เริ่มประชุมใหม่"
-            className="-mt-7 grid h-16 w-16 place-items-center rounded-full bg-brand-600 text-white shadow-lg shadow-brand-600/30 ring-4 ring-canvas transition-colors duration-200 hover:bg-brand-700 dark:ring-slate-950">
+            className="-mt-7 grid h-16 w-16 place-items-center rounded-full bg-brand-600 text-white shadow-lg shadow-brand-600/30 ring-4 ring-canvas transition-colors duration-200 hover:bg-brand-700">
             <IconMic width={28} height={28} />
           </button>
         </div>
@@ -81,11 +81,6 @@ export function App() {
   useEffect(() => {
     refreshModelStates()
     ensureBuiltinTyphoon()
-    const mq = window.matchMedia('(prefers-color-scheme: dark)')
-    const apply = () => document.documentElement.classList.toggle('dark', mq.matches)
-    apply()
-    mq.addEventListener('change', apply)
-    return () => mq.removeEventListener('change', apply)
   }, [])
   return (
     <Router hook={useHashLocation}>

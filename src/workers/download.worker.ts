@@ -57,7 +57,7 @@ async function download(spec: ModelSpec, signal: AbortSignal) {
         // 416 = our Range starts at/after EOF → the file is already complete.
         if (res.status === 416) {
           res.body?.cancel()
-        } else if (!res.ok) throw new Error(`ดาวน์โหลด ${name} ไม่สำเร็จ (HTTP ${res.status})`)
+        } else if (!res.ok) throw new Error(`Download of ${name} failed (HTTP ${res.status})`)
         else {
           if (offset > 0 && res.status === 200) {
             access.truncate(0) // server ignored Range → restart this file
@@ -112,7 +112,7 @@ async function extractZip(src: FileSystemSyncAccessHandle, dir: FileSystemDirect
   const tv = new DataView(tail.buffer)
   let eocd = -1
   for (let i = tailLen - 22; i >= 0; i--) if (tv.getUint32(i, true) === 0x06054b50) { eocd = i; break }
-  if (eocd < 0) throw new Error('ZIP ไม่ถูกต้อง')
+  if (eocd < 0) throw new Error('Invalid ZIP file')
   const count = tv.getUint16(eocd + 10, true)
   const cdSize = tv.getUint32(eocd + 12, true)
   const cdOff = tv.getUint32(eocd + 16, true)
@@ -152,7 +152,7 @@ async function extractZip(src: FileSystemSyncAccessHandle, dir: FileSystemDirect
         src.read(comp, { at: dataOff })
         out.write(inflateSync(comp), { at: 0 })
       } else {
-        throw new Error(`ZIP method ${method} ไม่รองรับ`)
+        throw new Error(`Unsupported ZIP method ${method}`)
       }
       out.flush()
     } finally {

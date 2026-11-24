@@ -4,6 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db, getSetting, touchMeeting, uid, type AsrLanguage } from '../db/schema'
 import { floatToPcm16Blob, pcm16BlobsToFloat } from '../lib/audio'
 import type { AsrIn, AsrOut, CloudAsr } from './protocol'
+import { getT } from '../i18n'
 
 export interface RecorderState {
   status: 'idle' | 'starting' | 'recording' | 'paused' | 'stopping'
@@ -34,7 +35,7 @@ export interface AsrConfig { available: boolean; reason?: string; cloud?: CloudA
 export async function resolveAsr(): Promise<AsrConfig> {
   const all = await db.providers.toArray()
   const p = all.find((x) => x.baseUrl?.includes('opentyphoon') && x.apiKey) ?? all.find((x) => x.managed)
-  if (!p) return { available: false, reason: 'ต้องเชื่อมต่อ Typhoon API ก่อน' }
+  if (!p) return { available: false, reason: getT().settings.asr.needConnect }
   const model = await getSetting('asr.cloudModel', TYPHOON_ASR_MODELS[0])
   return { available: true, system: !!p.managed, host: new URL(p.baseUrl!).host, cloud: { baseUrl: p.baseUrl!, apiKey: p.apiKey, model } }
 }
@@ -159,7 +160,7 @@ export async function startRecording(meetingId: string, language: AsrLanguage, t
         send({ type: 'reset', offsetMs: baseMs })
         asrOn = true
       } catch (err) {
-        patch({ message: `บันทึกเสียงอย่างเดียว: ${(err as Error).message}` })
+        patch({ message: `${getT().record.recordingOnly}: ${(err as Error).message}` })
       }
     }
     onFinal = (m) => {
@@ -256,7 +257,7 @@ export async function stopRecording() {
 export async function transcribeRecording(meetingId: string) {
   await ensureAsr()
   const chunks = await db.audio.where('[meetingId+seq]').between([meetingId, -Infinity], [meetingId, Infinity]).toArray()
-  if (!chunks.length) throw new Error('ไม่มีไฟล์เสียงของการประชุมนี้')
+  if (!chunks.length) throw new Error(getT().meeting.noAudio)
   await db.segments.where('meetingId').equals(meetingId).filter((s) => s.source === 'asr' && !s.edited).delete()
   const pcm = await pcm16BlobsToFloat(chunks.map((c) => c.pcm))
   patch({ offline: 0 })

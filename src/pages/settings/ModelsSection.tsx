@@ -5,61 +5,61 @@ import { Progress, Section } from '../../components/ui'
 import { fmtBytes } from '../../lib/format'
 import { confirmDialog, toast } from '../../components/feedback'
 import { deviceInfo, type DeviceInfo } from '../../lib/device'
+import { useT } from '../../i18n'
 
 const ORDER: ModelKey[] = ['ocr', 'tts']
-const USE: Record<ModelKey, string> = { ocr: 'สแกนเอกสาร', tts: 'อ่านออกเสียง' }
 
 export function ModelsSection() {
+  const t = useT()
+  const M = t.settings.models
   const states = modelStates.use()
   const [dev, setDev] = useState<DeviceInfo | null>(null)
   useEffect(() => { deviceInfo().then(setDev) }, [states])
+  const use: Record<ModelKey, string> = { ocr: M.useOcr, tts: M.useTts }
+  const desc: Record<ModelKey, string> = { ocr: M.ocrDesc, tts: M.ttsDesc }
 
   return (
-    <Section title="โมเดลในเครื่อง" desc="ดาวน์โหลดครั้งเดียว ทำงานได้แม้ออฟไลน์">
+    <Section title={M.title} desc={M.desc}>
       <div className="space-y-2">
         {ORDER.map((k) => {
           const spec = MODELS[k]
           const s = states[k]
           return (
             <div key={k} className="card">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="chip">{USE[k]}</span>
-                    {s.status === 'ready' && <span className="chip bg-emerald-100 text-emerald-800">พร้อมใช้</span>}
-                  </div>
-                  <div className="mt-1.5 font-medium">{spec.label}</div>
-                  <div className="text-sm text-slate-500">{spec.description}</div>
-                  <div className="mt-1 text-xs text-slate-400">{fmtBytes(totalSize(spec))} • {spec.license} • {spec.repo}</div>
-                </div>
+              <div className="flex items-center gap-2">
+                <span className="chip">{use[k]}</span>
+                {s.status === 'ready' && <span className="chip bg-emerald-100 text-emerald-800">{M.ready}</span>}
               </div>
+              <div className="mt-1.5 font-medium">{spec.label}</div>
+              <div className="text-sm text-slate-600">{desc[k]}</div>
+              <div className="mt-1 text-xs text-slate-500">{fmtBytes(totalSize(spec))} • {spec.license} • {spec.repo}</div>
               {s.status === 'downloading' && (
                 <div className="mt-3">
                   <Progress value={s.loaded / s.total} />
-                  <div className="mt-1 flex justify-between text-xs text-slate-500">
-                    <span>{s.file} — {fmtBytes(s.loaded)} / {fmtBytes(s.total)}</span>
-                    <button className="text-rose-600" onClick={() => cancelDownload(k)}>ยกเลิก</button>
+                  <div className="mt-1 flex justify-between text-xs text-slate-600">
+                    <span>{s.file} — {t.common.of(fmtBytes(s.loaded), fmtBytes(s.total))}</span>
+                    <button className="text-rose-600" onClick={() => cancelDownload(k)}>{t.common.cancel}</button>
                   </div>
                 </div>
               )}
-              {s.status === 'error' && <div className="mt-2 text-sm text-rose-600">{s.message} — กดดาวน์โหลดอีกครั้งเพื่อทำต่อจากเดิม</div>}
+              {s.status === 'error' && <div className="mt-2 text-sm text-rose-600">{s.message} — {M.stalledInline}</div>}
               <div className="mt-3 flex gap-2">
                 {(s.status === 'absent' || s.status === 'error') && (
-                  <button className="btn-primary flex-1" onClick={() => downloadModel(k).then(() => toast(`${spec.label} พร้อมใช้แล้ว`)).catch(() => toast('ดาวน์โหลดสะดุด กดอีกครั้งเพื่อทำต่อ', 'bad'))}>ดาวน์โหลด {fmtBytes(totalSize(spec))}</button>
+                  <button className="btn-primary flex-1" onClick={() => downloadModel(k).then(() => toast(M.readyToast(spec.label))).catch(() => toast(M.stalled, 'bad'))}>
+                    {t.common.download} {fmtBytes(totalSize(spec))}
+                  </button>
                 )}
                 {s.status === 'ready' && (
-                  <button className="btn-outline text-rose-600" onClick={async () => { if (await confirmDialog({ title: `ลบ ${spec.label}?`, body: 'คืนพื้นที่ในเครื่อง ดาวน์โหลดใหม่ได้ทุกเมื่อ', ok: 'ลบโมเดล', danger: true })) { await deleteModel(k); toast('ลบโมเดลแล้ว') } }}>ลบโมเดล</button>
+                  <button className="btn-outline text-rose-600" onClick={async () => {
+                    if (await confirmDialog({ title: M.deleteQ(spec.label), body: M.deleteBody, ok: M.deleteOk, danger: true })) { await deleteModel(k); toast(M.deleted) }
+                  }}>{M.deleteOk}</button>
                 )}
               </div>
             </div>
           )
         })}
       </div>
-      {dev && (
-        <p className="mt-2 px-1 text-xs text-slate-400">
-          อุปกรณ์: {dev.memoryGB ? `RAM ~${dev.memoryGB} GB • ` : ''}{dev.cores} cores • WebGPU {dev.webgpu ? 'มี' : 'ไม่มี'} • multi-thread {dev.isolated ? 'เปิด' : 'ปิด'}
-        </p>
-      )}
+      {dev && <p className="mt-2 px-1 text-xs text-slate-500">{M.device(dev.memoryGB ? `RAM ~${dev.memoryGB} GB • ` : '', dev.cores, dev.webgpu, dev.isolated)}</p>}
     </Section>
   )
 }

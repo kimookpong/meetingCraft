@@ -29,7 +29,7 @@ export class AnthropicProvider implements LlmProvider {
     )
     stream.on('text', (t) => onText?.(t))
     const msg = await stream.finalMessage()
-    if (msg.stop_reason === 'refusal') throw new Error('Claude ปฏิเสธคำขอนี้ (refusal)')
+    if (msg.stop_reason === 'refusal') throw new Error('Claude declined this request (refusal)')
     return msg.content.flatMap((b) => (b.type === 'text' ? [b.text] : [])).join('')
   }
 }

@@ -31,7 +31,7 @@ export const MODELS = {
   ocr: {
     id: 'ocr-openthai2-text',
     label: 'OpenThai2.1 OCR Text',
-    description: 'อ่านข้อความไทย/อังกฤษจากภาพเอกสาร (detector + CTC recognizer + rec2 สำหรับฟอนต์หัวกลม)',
+    description: 'Thai/English document OCR (detector + CTC recognizer + rec2)',
     // Pinned to the 2.1.4 release commit (18 Nov 2026) so results stay reproducible.
     // Same id as before: 2.1 ships byte-identical det/rec/rec2 to what the old 2.0 name served.
     repo: 'iapp/OpenThai2.1-OCR-Text-20261118',
@@ -47,7 +47,7 @@ export const MODELS = {
   tts: {
     id: 'tts-makham-paradee-int8',
     label: 'MakHam TTS (Paradee Thai int8)',
-    description: 'เสียงพูดไทยหญิง 24 kHz, 5 วรรณยุกต์ — 8 MB, เร็วกว่า realtime ~45 เท่าบน CPU',
+    description: 'Thai female voice, 24 kHz, 5 tones, 8 MB',
     repo: 'pythainlp/MakHamTTS',
     revision: 'main',
     license: 'Apache-2.0',

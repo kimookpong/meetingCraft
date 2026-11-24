@@ -1,5 +1,6 @@
 import { createStore } from '../lib/store'
 import { Sheet } from './ui'
+import { getT, useT } from '../i18n'
 
 /* Friendly replacements for window.alert / window.confirm. */
 
@@ -17,12 +18,13 @@ type Ask = { title: string; body?: string; ok: string; danger?: boolean; resolve
 const asks = createStore<Ask | null>(null)
 
 export function confirmDialog(o: { title: string; body?: string; ok?: string; danger?: boolean }): Promise<boolean> {
-  return new Promise((resolve) => asks.set({ ok: 'ตกลง', ...o, resolve }))
+  return new Promise((resolve) => asks.set({ ok: getT().common.ok, ...o, resolve }))
 }
 
 export function FeedbackHost() {
   const list = toasts.use()
   const ask = asks.use()
+  const t = useT()
   const close = (v: boolean) => { ask?.resolve(v); asks.set(null) }
   return (
     <>
@@ -38,7 +40,7 @@ export function FeedbackHost() {
       <Sheet open={!!ask} onClose={() => close(false)} title={ask?.title ?? ''}
         footer={
           <div className="flex gap-2">
-            <button className="btn-outline flex-1" onClick={() => close(false)}>ยกเลิก</button>
+            <button className="btn-outline flex-1" onClick={() => close(false)}>{t.common.cancel}</button>
             <button autoFocus className={`flex-1 ${ask?.danger ? 'btn-danger' : 'btn-primary'}`} onClick={() => close(true)}>{ask?.ok}</button>
           </div>
         }>

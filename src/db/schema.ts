@@ -1,4 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie'
+import { dateTag, getT } from '../i18n'
 
 export type AsrLanguage = 'th-TH' | 'th-mix'
 
@@ -123,7 +124,7 @@ export async function createMeeting(partial: Partial<Meeting> = {}): Promise<Mee
   const now = Date.now()
   const m: Meeting = {
     id: uid(),
-    title: partial.title ?? `ประชุม ${new Date(now).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })} ${new Date(now).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}`,
+    title: partial.title ?? getT().meeting.defaultTitle(new Date(now).toLocaleDateString(dateTag(), dateTag() === 'th-TH' ? { day: 'numeric', month: 'short', year: '2-digit' } : { month: 'short', day: 'numeric' }), new Date(now).toLocaleTimeString(dateTag(), { hour: '2-digit', minute: '2-digit' })),
     startedAt: now,
     durationMs: 0,
     attendees: [],

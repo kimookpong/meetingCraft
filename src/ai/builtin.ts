@@ -15,7 +15,7 @@ export async function ensureBuiltinTyphoon() {
   if (!BUILTIN_TYPHOON_URL) { if (existing) await db.providers.delete(BUILTIN_TYPHOON_ID); return }
   const p = presetFor('typhoon')!
   await db.providers.put({
-    id: BUILTIN_TYPHOON_ID, kind: 'openai-compatible', label: 'Typhoon (ผ่าน meetingCraft)', baseUrl: BUILTIN_TYPHOON_URL,
+    id: BUILTIN_TYPHOON_ID, kind: 'openai-compatible', label: 'Typhoon (meetingCraft)', baseUrl: BUILTIN_TYPHOON_URL,
     model: existing?.model ?? p.model, chunkChars: existing?.chunkChars ?? p.chunkChars, managed: true,
     createdAt: existing?.createdAt ?? Date.now(),
   })

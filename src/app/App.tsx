@@ -13,9 +13,11 @@ import { ensureBuiltinTyphoon } from '../ai/builtin'
 import { recorder } from '../asr/recorder'
 import { startNewMeeting } from '../lib/actions'
 import { fmtClock } from '../lib/format'
+import { useT } from '../i18n'
 
 function BottomNav() {
   const [loc, nav] = useLocation()
+  const t = useT()
   if (loc.startsWith('/m/')) return null
   const item = (href: string, label: string, icon: React.ReactNode, active: boolean) => (
     <Link href={href} aria-current={active ? 'page' : undefined}
@@ -25,16 +27,16 @@ function BottomNav() {
     </Link>
   )
   return (
-    <nav className="pb-safe fixed inset-x-0 bottom-0 z-30 border-t border-slate-200/80 bg-white/95 backdrop-blur-lg" aria-label="เมนูหลัก">
+    <nav className="pb-safe fixed inset-x-0 bottom-0 z-30 border-t border-slate-200/80 bg-white/95 backdrop-blur-lg" aria-label={t.nav.main}>
       <div className="mx-auto flex max-w-md items-center px-4">
-        {item('/', 'หน้าแรก', <IconHome />, loc === '/')}
+        {item('/', t.nav.home, <IconHome />, loc === '/')}
         <div className="flex flex-1 justify-center">
-          <button onClick={() => startNewMeeting(nav)} aria-label="เริ่มประชุมใหม่"
+          <button onClick={() => startNewMeeting(nav)} aria-label={t.nav.newMeeting}
             className="-mt-7 grid h-16 w-16 place-items-center rounded-full bg-brand-600 text-white shadow-lg shadow-brand-600/30 ring-4 ring-canvas transition-colors duration-200 hover:bg-brand-700">
             <IconMic width={28} height={28} />
           </button>
         </div>
-        {item('/settings', 'ตั้งค่า', <IconSettings />, loc.startsWith('/settings'))}
+        {item('/settings', t.nav.settings, <IconSettings />, loc.startsWith('/settings'))}
       </div>
     </nav>
   )
@@ -44,17 +46,19 @@ function BottomNav() {
 function RecordingPill() {
   const r = recorder.use()
   const [loc, nav] = useLocation()
+  const t = useT()
   if (r.status === 'idle' || !r.meetingId || loc === `/m/${r.meetingId}`) return null
   return (
     <button onClick={() => nav(`/m/${r.meetingId}`)} className="bottom-safe fixed left-1/2 z-40 flex min-h-11 -translate-x-1/2 items-center gap-2 rounded-full bg-rose-600 px-5 text-sm font-semibold text-white shadow-lg">
       <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-white" />
-      กำลังบันทึก {fmtClock(r.elapsedMs)} — แตะเพื่อกลับไป
+      {t.app.recordingPill(fmtClock(r.elapsedMs))}
     </button>
   )
 }
 
 function UpdateToast() {
   const [update, setUpdate] = useState<null | (() => void)>(null)
+  const t = useT()
   useEffect(() => {
     const u = registerSW({
       onNeedRefresh: () => setUpdate(() => () => u(true)),
@@ -71,8 +75,8 @@ function UpdateToast() {
   if (!update) return null
   return (
     <div className="bottom-safe animate-pop fixed inset-x-4 z-50 mx-auto flex max-w-md items-center justify-between gap-3 rounded-2xl bg-slate-900 px-4 py-3 text-sm text-white shadow-xl">
-      มีเวอร์ชันใหม่พร้อมใช้งาน
-      <button className="min-h-11 rounded-xl bg-white/10 px-4 font-semibold" onClick={update}>อัปเดตเลย</button>
+      {t.app.updateReady}
+      <button className="min-h-11 rounded-xl bg-white/10 px-4 font-semibold" onClick={update}>{t.app.updateNow}</button>
     </div>
   )
 }

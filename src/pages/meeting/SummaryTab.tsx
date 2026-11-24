@@ -14,6 +14,8 @@ import { IconCheck, IconChevron, IconCopy, IconShare, IconShield, IconSparkles, 
 import { speak, stopSpeaking, ttsState } from '../../tts/player'
 import { fmtBytes, fmtDate } from '../../lib/format'
 import type { AiProviderConfig } from '../../db/schema'
+import { useT } from '../../i18n'
+import { providerLabel } from '../../ai/labels'
 
 /** Where data goes, in user terms (the built-in proxy is shown simply as Typhoon). */
 const hostOf = (c: AiProviderConfig) => (c.managed ? 'Typhoon' : c.baseUrl ? new URL(c.baseUrl).host : c.kind === 'anthropic' ? 'api.anthropic.com' : '')
@@ -31,6 +33,7 @@ export function SummaryTab({ meeting, onGoTranscript }: { meeting: Meeting; onGo
   const [shown, setShown] = useState<string | null>(null)
   const abort = useRef<AbortController | null>(null)
   const llm = llmLoad.use()
+  const t = useT()
   const tts = ttsState.use()
 
   useEffect(() => { getSetting('ai.default', EXTRACTIVE_ID).then(setProviderId) }, [])
@@ -44,16 +47,16 @@ export function SummaryTab({ meeting, onGoTranscript }: { meeting: Meeting; onGo
 
   const run = async () => {
     if (remote && !(await confirmDialog({
-      title: 'ส่งข้อมูลไปสรุปที่ AI ภายนอก?',
-      body: `ข้อความถอดเสียง เอกสาร และโน้ตของการประชุมนี้จะถูกส่งไปที่ ${hostOf(cfg)} เพื่อสรุป ถ้าเป็นเรื่องลับ แนะนำให้ใช้ AI ในเครื่องแทน`,
-      ok: 'ส่งและสรุป',
+      title: t.summary.remoteQ,
+      body: t.summary.remoteBody(hostOf(cfg)),
+      ok: t.summary.remoteOk,
     }))) return
-    setRunning(true); setError(''); setDraft(''); setStage('กำลังรวบรวมข้อมูล')
+    setRunning(true); setError(''); setDraft(''); setStage(t.summary.gathering)
     abort.current = new AbortController()
     try {
       const s = await summarizeMeeting(meeting, cfg, (p) => { setStage(p.stage); setDraft(p.text) }, abort.current.signal)
       setShown(s.id)
-      toast('สรุปเสร็จแล้ว')
+      toast(t.summary.done)
     } catch (e) {
       if ((e as Error).name !== 'AbortError') setError((e as Error).message)
     } finally {
@@ -63,9 +66,9 @@ export function SummaryTab({ meeting, onGoTranscript }: { meeting: Meeting; onGo
 
   if (hasContent === false && !summaries?.length) {
     return (
-      <Empty art={<ArtSummary />} title="ยังไม่มีอะไรให้สรุป"
-        action={<button className="btn-soft" onClick={onGoTranscript}>ไปเริ่มบันทึกเสียง</button>}>
-        บันทึกเสียง ถ่ายเอกสาร หรือจดโน้ตก่อน แล้วกลับมากดสรุปได้เลย
+      <Empty art={<ArtSummary />} title={t.summary.emptyTitle}
+        action={<button className="btn-soft" onClick={onGoTranscript}>{t.summary.goRecord}</button>}>
+        {t.summary.emptyBody}
       </Empty>
     )
   }
@@ -73,65 +76,65 @@ export function SummaryTab({ meeting, onGoTranscript }: { meeting: Meeting; onGo
   return (
     <div>
       <div className="card mb-4">
-        <div className="label">ให้ใครช่วยสรุป</div>
+        <div className="label">{t.summary.who}</div>
         <button onClick={() => setPick(true)} disabled={running}
           className="flex min-h-14 w-full items-center gap-3 rounded-2xl border border-slate-200 px-3.5 text-left transition-colors duration-200 hover:bg-slate-50">
           <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${remote ? 'bg-accent-100 text-accent-700' : 'bg-emerald-100 text-emerald-700'}`}>
             {remote ? <IconSparkles width={20} /> : <IconShield width={20} />}
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-[15px] font-semibold">{cfg.label}</span>
-            <span className="block truncate text-[13px] text-slate-600">{remote ? `ส่งไปประมวลผลที่ ${hostOf(cfg)}` : 'ประมวลผลในเครื่อง/เครือข่ายของคุณ'}</span>
+            <span className="block truncate text-[15px] font-semibold">{providerLabel(cfg, t)}</span>
+            <span className="block truncate text-[13px] text-slate-600">{remote ? t.summary.sentTo(hostOf(cfg)) : t.summary.local}</span>
           </span>
-          <span className="text-[13px] font-semibold text-brand-700">เปลี่ยน</span>
+          <span className="text-[13px] font-semibold text-brand-700">{t.common.change}</span>
         </button>
 
         {!hasTyphoon && cfg.kind === 'extractive' && (
           <Link href="/settings" onClick={() => sessionStorage.setItem('settings:focus', 'ai')} className="mt-3 flex items-center gap-3 rounded-2xl bg-brand-50 px-3.5 py-3 text-[14px] text-brand-900 transition-colors duration-200 hover:bg-brand-100">
             <IconSparkles width={20} className="shrink-0 text-accent-500" />
-            <span className="flex-1"><b>อยากได้สรุปที่ดีกว่านี้?</b> เพิ่ม Typhoon API — AI ภาษาไทย ใช้ฟรี</span>
+            <span className="flex-1"><b>{t.summary.upsellTitle}</b> {t.summary.upsellBody}</span>
             <IconChevron width={18} />
           </Link>
         )}
 
         <div className="mt-4">
           {running
-            ? <button className="btn-outline w-full" onClick={() => abort.current?.abort()}>หยุดการสรุป</button>
-            : <button className="btn-primary w-full" onClick={run}><IconSparkles /> {current ? 'สรุปใหม่อีกครั้ง' : 'สรุปการประชุมนี้'}</button>}
+            ? <button className="btn-outline w-full" onClick={() => abort.current?.abort()}>{t.summary.stopRun}</button>
+            : <button className="btn-primary w-full" onClick={run}><IconSparkles /> {current ? t.summary.again : t.summary.run}</button>}
         </div>
         {running && cfg.kind === 'onnx-local' && llm.loading && (
           <div className="mt-3 text-[13px] text-slate-600">
-            กำลังโหลดโมเดล AI ในเครื่อง (ครั้งแรกเท่านั้น) {llm.total ? `${fmtBytes(llm.loaded)} / ${fmtBytes(llm.total)}` : ''}
-            <Progress className="mt-1.5" value={llm.total ? llm.loaded / llm.total : 0} label="โหลดโมเดล AI" />
+            {t.summary.loadingModel(llm.total ? `${fmtBytes(llm.loaded)} / ${fmtBytes(llm.total)}` : '')}
+            <Progress className="mt-1.5" value={llm.total ? llm.loaded / llm.total : 0} label={t.summary.loadingModelAria} />
           </div>
         )}
         {running && stage && <div className="mt-3 flex items-center gap-2 text-sm font-medium text-brand-700" role="status"><Spinner className="h-4 w-4" />{stage}…</div>}
-        {error && <div className="mt-3"><Notice tone="bad"><b>สรุปไม่สำเร็จ</b> — {error}</Notice></div>}
+        {error && <div className="mt-3"><Notice tone="bad"><b>{t.summary.failed}</b> — {error}</Notice></div>}
       </div>
 
       {running && draft && <article className="prose-md card mb-4" aria-live="polite" dangerouslySetInnerHTML={{ __html: renderMarkdown(draft) }} />}
 
       {!running && !current && (
-        <p className="px-2 py-6 text-center text-[15px] text-slate-600">กด “สรุปการประชุมนี้” แล้วรอสักครู่ จะได้ภาพรวม มติ และงานที่ต้องทำ</p>
+        <p className="px-2 py-6 text-center text-[15px] text-slate-600">{t.summary.hint}</p>
       )}
 
       {!running && current && (
         <>
           <div className="mb-2 flex flex-wrap items-center gap-2 px-1">
-            <span className="text-[13px] text-slate-600">โดย {current.providerLabel} · {fmtDate(current.createdAt)}</span>
+            <span className="text-[13px] text-slate-600">{t.summary.by(current.providerLabel, fmtDate(current.createdAt))}</span>
           </div>
           <div className="mb-3 grid grid-cols-4 gap-2">
-            <ActionBtn label={tts.speaking && tts.key === current.id ? 'หยุด' : 'ฟัง'} icon={<IconSpeaker width={20} />} onClick={() => (tts.speaking && tts.key === current.id ? stopSpeaking() : speak(current.markdown, current.id))} />
-            <ActionBtn label="คัดลอก" icon={<IconCopy width={20} />} onClick={async () => { await navigator.clipboard.writeText(current.markdown); toast('คัดลอกแล้ว') }} />
-            <ActionBtn label="แชร์" icon={<IconShare width={20} />} onClick={() => shareOrDownload(current.markdown, `สรุป-${fileBase(meeting)}.md`)} />
-            <ActionBtn label="ลบ" danger icon={<IconTrash width={20} />} onClick={async () => {
-              if (await confirmDialog({ title: 'ลบสรุปนี้?', body: 'ลบเฉพาะสรุปนี้ บันทึกเสียงและเอกสารยังอยู่ครบ', ok: 'ลบ', danger: true })) { await db.summaries.delete(current.id); toast('ลบสรุปแล้ว') }
+            <ActionBtn label={tts.speaking && tts.key === current.id ? t.common.stop : t.common.listen} icon={<IconSpeaker width={20} />} onClick={() => (tts.speaking && tts.key === current.id ? stopSpeaking() : speak(current.markdown, current.id))} />
+            <ActionBtn label={t.common.copy} icon={<IconCopy width={20} />} onClick={async () => { await navigator.clipboard.writeText(current.markdown); toast(t.common.copied) }} />
+            <ActionBtn label={t.common.share} icon={<IconShare width={20} />} onClick={() => shareOrDownload(current.markdown, t.summary.fileName(fileBase(meeting)))} />
+            <ActionBtn label={t.common.delete} danger icon={<IconTrash width={20} />} onClick={async () => {
+              if (await confirmDialog({ title: t.summary.deleteQ, body: t.summary.deleteBody, ok: t.common.delete, danger: true })) { await db.summaries.delete(current.id); toast(t.summary.deleted) }
             }} />
           </div>
           <article className="prose-md card" dangerouslySetInnerHTML={{ __html: renderMarkdown(current.markdown) }} />
           {summaries!.length > 1 && (
             <div className="mt-5">
-              <div className="label">สรุปฉบับอื่น</div>
+              <div className="label">{t.summary.others}</div>
               <div className="flex flex-wrap gap-2">
                 {summaries!.map((s) => (
                   <button key={s.id} onClick={() => setShown(s.id)} aria-pressed={s.id === current.id}
@@ -145,7 +148,7 @@ export function SummaryTab({ meeting, onGoTranscript }: { meeting: Meeting; onGo
         </>
       )}
 
-      <Sheet open={pick} onClose={() => setPick(false)} title="เลือก AI ช่วยสรุป">
+      <Sheet open={pick} onClose={() => setPick(false)} title={t.summary.pickTitle}>
         <div className="space-y-2 pb-2">
           {all.map((p) => {
             const r = createProvider(p).remote
@@ -153,14 +156,14 @@ export function SummaryTab({ meeting, onGoTranscript }: { meeting: Meeting; onGo
               <button key={p.id} onClick={() => choose(p.id)} aria-pressed={p.id === providerId}
                 className={`flex min-h-16 w-full items-center gap-3 rounded-2xl border px-3.5 py-2.5 text-left transition-colors duration-200 ${p.id === providerId ? 'border-brand-500 bg-brand-50' : 'border-slate-200 hover:bg-slate-50'}`}>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[15px] font-semibold">{p.label}</span>
-                  <span className="block text-[13px] text-slate-600">{p.kind === 'extractive' ? 'เร็ว ไม่ต้องตั้งค่า เลือกประโยคสำคัญให้' : r ? `ส่งไปที่ ${hostOf(p)}` : 'ในเครื่อง/เครือข่ายของคุณ'}</span>
+                  <span className="block text-[15px] font-semibold">{providerLabel(p, t)}</span>
+                  <span className="block text-[13px] text-slate-600">{p.kind === 'extractive' ? t.summary.extractiveDesc : r ? t.summary.sendTo(hostOf(p)) : t.summary.localShort}</span>
                 </span>
                 {p.id === providerId && <span className="grid h-7 w-7 place-items-center rounded-full bg-brand-600 text-white"><IconCheck width={16} /></span>}
               </button>
             )
           })}
-          <Link href="/settings" onClick={() => sessionStorage.setItem('settings:focus', 'ai')} className="btn-soft mt-2 w-full">+ เพิ่ม AI ตัวอื่น (Typhoon, Gemini, Ollama…)</Link>
+          <Link href="/settings" onClick={() => sessionStorage.setItem('settings:focus', 'ai')} className="btn-soft mt-2 w-full">{t.summary.addMore}</Link>
         </div>
       </Sheet>
     </div>

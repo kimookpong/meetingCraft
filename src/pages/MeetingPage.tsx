@@ -15,11 +15,13 @@ import { SummaryTab } from './meeting/SummaryTab'
 import { RecordDock } from './meeting/RecordDock'
 import { DetailsSheet } from './meeting/DetailsSheet'
 import { VoiceChat } from '../chat/VoiceChat'
+import { useT } from '../i18n'
 
 type Tab = 'transcript' | 'docs' | 'summary'
 
 export function MeetingPage({ id }: { id: string }) {
   const [, nav] = useLocation()
+  const t = useT()
   const meeting = useLiveQuery(() => db.meetings.get(id), [id])
   const counts = useLiveQuery(async () => ({
     s: await db.segments.where('meetingId').equals(id).count(),
@@ -41,7 +43,7 @@ export function MeetingPage({ id }: { id: string }) {
   }, [id])
 
   if (meeting === undefined) return <div className="grid min-h-dvh place-items-center"><Spinner className="h-8 w-8 text-brand-600" /></div>
-  if (!meeting) return <div className="p-6">ไม่พบการประชุมนี้ อาจถูกลบไปแล้ว</div>
+  if (!meeting) return <div className="p-6">{t.meeting.notFound}</div>
   const isRecordingHere = rec.status !== 'idle' && rec.meetingId === id
 
   const run = async (label: string, f: () => Promise<unknown>, done?: string) => {
@@ -51,39 +53,39 @@ export function MeetingPage({ id }: { id: string }) {
   }
 
   const tabs: [Tab, string, React.ReactNode, number | undefined][] = [
-    ['transcript', 'ถอดเสียง', <IconWave width={18} />, counts?.s],
-    ['docs', 'เอกสาร', <IconDoc width={18} />, counts?.d],
-    ['summary', 'สรุป', <IconSparkles width={18} />, counts?.y],
+    ['transcript', t.meeting.tabTranscript, <IconWave width={18} />, counts?.s],
+    ['docs', t.meeting.tabDocs, <IconDoc width={18} />, counts?.d],
+    ['summary', t.meeting.tabSummary, <IconSparkles width={18} />, counts?.y],
   ]
 
   return (
     <div className="min-h-dvh pb-48">
       <TopBar
-        left={<button className="btn-ghost min-h-11 px-2.5" onClick={() => nav('/')} aria-label="กลับหน้าแรก"><IconBack /></button>}
+        left={<button className="btn-ghost min-h-11 px-2.5" onClick={() => nav('/')} aria-label={t.meeting.back}><IconBack /></button>}
         title={meeting.title}
-        sub={`${fmtDate(meeting.startedAt)}${meeting.durationMs || isRecordingHere ? ` · ยาว ${fmtClock(isRecordingHere ? rec.elapsedMs : meeting.durationMs)}` : ''}`}
-        right={<button className="btn-ghost min-h-11 px-2.5" onClick={() => setMenu(true)} aria-label="ตัวเลือกเพิ่มเติม"><IconMore /></button>}
+        sub={`${fmtDate(meeting.startedAt)}${meeting.durationMs || isRecordingHere ? t.meeting.length(fmtClock(isRecordingHere ? rec.elapsedMs : meeting.durationMs)) : ''}`}
+        right={<button className="btn-ghost min-h-11 px-2.5" onClick={() => setMenu(true)} aria-label={t.meeting.more}><IconMore /></button>}
       />
 
       <div className="mx-auto max-w-2xl px-4">
         <button onClick={() => setDetails(true)} className="mb-3 flex w-full flex-wrap items-center gap-2 rounded-2xl text-left">
-          <span className="chip min-h-8 px-3"><IconPin width={14} />{meeting.location || 'เพิ่มสถานที่'}</span>
-          <span className="chip min-h-8 px-3"><IconUsers width={14} />{meeting.attendees.length ? `${meeting.attendees.length} คน` : 'เพิ่มผู้เข้าร่วม'}</span>
-          <span className="chip min-h-8 bg-brand-50 px-3 text-brand-700"><IconPen width={14} />แก้ไขรายละเอียด</span>
+          <span className="chip min-h-8 px-3"><IconPin width={14} />{meeting.location || t.meeting.addPlace}</span>
+          <span className="chip min-h-8 px-3"><IconUsers width={14} />{meeting.attendees.length ? t.common.people(meeting.attendees.length) : t.meeting.addPeople}</span>
+          <span className="chip min-h-8 bg-brand-50 px-3 text-brand-700"><IconPen width={14} />{t.meeting.editDetails}</span>
         </button>
-        <button onClick={() => (isRecordingHere || rec.status !== 'idle' ? toast('หยุดบันทึกก่อน แล้วค่อยคุยกับผู้ช่วย', 'info') : setTalk('chat'))}
+        <button onClick={() => (isRecordingHere || rec.status !== 'idle' ? toast(t.meeting.stopFirst, 'info') : setTalk('chat'))}
           className="mb-3 flex min-h-14 w-full items-center gap-3 rounded-2xl bg-accent-50 px-4 text-left transition-colors duration-200 hover:bg-accent-100">
           <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-accent-500 text-white"><IconSparkles width={20} /></span>
           <span className="min-w-0 flex-1">
-            <span className="block text-[15px] font-bold text-accent-700">คุยกับผู้ช่วย</span>
-            <span className="block truncate text-[13px] text-slate-600">ถามเรื่องในประชุม หรือสั่งให้บันทึกเพิ่ม ด้วยเสียง</span>
+            <span className="block text-[15px] font-bold text-accent-700">{t.meeting.talkTitle}</span>
+            <span className="block truncate text-[13px] text-slate-600">{t.meeting.talkDesc}</span>
           </span>
         </button>
       </div>
 
       <div className="sticky top-[calc(env(safe-area-inset-top)+4rem)] z-20 bg-canvas/90 backdrop-blur">
         <div className="mx-auto max-w-2xl px-4 py-2">
-          <div className="flex gap-1 rounded-2xl bg-slate-200/60 p-1" role="tablist" aria-label="ส่วนของการประชุม">
+          <div className="flex gap-1 rounded-2xl bg-slate-200/60 p-1" role="tablist" aria-label={t.meeting.tabsAria}>
             {tabs.map(([k, label, icon, n]) => (
               <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
                 className={`flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-xl text-[15px] font-semibold whitespace-nowrap transition-colors duration-200 ${tab === k ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-600'}`}>
@@ -108,42 +110,42 @@ export function MeetingPage({ id }: { id: string }) {
         // Offer a spoken debrief when something was actually captured.
         const n = await db.segments.where('meetingId').equals(id).count()
         if (n > 0) setOffer(true)
-        else toast('บันทึกเสียงเรียบร้อย')
+        else toast(t.meeting.audioSaved)
       }} />
-      <Sheet open={offer} onClose={() => setOffer(false)} title="บันทึกเสร็จแล้ว">
+      <Sheet open={offer} onClose={() => setOffer(false)} title={t.meeting.offerTitle}>
         <div className="pb-2 text-center">
           <div className="mx-auto mb-3 grid h-16 w-16 place-items-center rounded-2xl bg-accent-100 text-accent-700"><IconSparkles width={30} height={30} /></div>
-          <p className="text-[16px] font-semibold">คุยสรุปกับผู้ช่วยด้วยเสียงไหม?</p>
-          <p className="mx-auto mt-1 max-w-xs text-[14px] text-slate-600">ผู้ช่วยจะเล่ามติและงานที่ต้องทำให้ฟัง แล้วคุณพูดเพื่อแก้ไขหรือเพิ่มข้อมูลได้ทันที</p>
+          <p className="text-[16px] font-semibold">{t.meeting.offerQ}</p>
+          <p className="mx-auto mt-1 max-w-xs text-[14px] text-slate-600">{t.meeting.offerBody}</p>
           <div className="mt-5 flex flex-col gap-2">
-            <button className="btn-primary" onClick={() => { setOffer(false); setTalk('debrief') }}><IconSparkles /> คุยสรุปด้วยเสียง</button>
-            <button className="btn-soft" onClick={() => { setOffer(false); setTab('summary') }}>ดูสรุปแบบข้อความ</button>
-            <button className="btn-ghost text-sm" onClick={() => setOffer(false)}>ไว้ทีหลัง</button>
+            <button className="btn-primary" onClick={() => { setOffer(false); setTalk('debrief') }}><IconSparkles /> {t.meeting.offerTalk}</button>
+            <button className="btn-soft" onClick={() => { setOffer(false); setTab('summary') }}>{t.meeting.offerText}</button>
+            <button className="btn-ghost text-sm" onClick={() => setOffer(false)}>{t.common.later}</button>
           </div>
         </div>
       </Sheet>
 
       <DetailsSheet meeting={meeting} open={details} onClose={() => setDetails(false)} />
       {talk && <VoiceChat meeting={meeting} debrief={talk === 'debrief'} onClose={() => setTalk(false)} />}
-      <Sheet open={menu} onClose={() => setMenu(false)} title="ตัวเลือก">
+      <Sheet open={menu} onClose={() => setMenu(false)} title={t.meeting.menuTitle}>
         <div className="flex flex-col gap-1 pb-1">
-          <MenuItem icon={<IconPen />} label="แก้ไขรายละเอียดการประชุม" onClick={() => { setMenu(false); setDetails(true) }} />
-          <MenuItem icon={<IconShare />} label="แชร์บันทึกการประชุม" hint="ไฟล์ Markdown พร้อมสรุปและข้อความทั้งหมด"
-            onClick={() => run('กำลังเตรียมไฟล์…', async () => shareOrDownload(await meetingMarkdown(meeting), `${fileBase(meeting)}.md`))} />
-          <MenuItem icon={<IconDownload />} label="ดาวน์โหลดไฟล์เสียง" hint="ไฟล์ WAV สำหรับฟังย้อนหลัง"
-            onClick={() => run('กำลังเตรียมไฟล์เสียง…', async () => {
+          <MenuItem icon={<IconPen />} label={t.meeting.menuEdit} onClick={() => { setMenu(false); setDetails(true) }} />
+          <MenuItem icon={<IconShare />} label={t.meeting.menuShare} hint={t.meeting.menuShareHint}
+            onClick={() => run(t.meeting.preparing, async () => shareOrDownload(await meetingMarkdown(meeting), `${fileBase(meeting)}.md`))} />
+          <MenuItem icon={<IconDownload />} label={t.meeting.menuAudio} hint={t.meeting.menuAudioHint}
+            onClick={() => run(t.meeting.preparingAudio, async () => {
               const chunks = await db.audio.where('[meetingId+seq]').between([id, -Infinity], [id, Infinity]).toArray()
-              if (!chunks.length) throw new Error('การประชุมนี้ยังไม่มีไฟล์เสียง')
+              if (!chunks.length) throw new Error(t.meeting.noAudio)
               downloadBlob(await pcm16ToWav(chunks.map((c) => c.pcm)), `${fileBase(meeting)}.wav`)
             })} />
-          <MenuItem icon={<IconWave />} label="ถอดเสียงใหม่จากไฟล์บันทึก" hint={!asr?.available ? asr?.reason : 'ส่งไฟล์เสียงไปถอดที่ Typhoon อีกครั้ง'}
+          <MenuItem icon={<IconWave />} label={t.meeting.menuRetranscribe} hint={!asr?.available ? asr?.reason : t.meeting.menuRetranscribeHint}
             disabled={!asr?.available || isRecordingHere}
-            onClick={() => run('กำลังถอดเสียงจากไฟล์บันทึก…', () => transcribeRecording(id), 'ถอดเสียงเสร็จแล้ว')} />
-          <MenuItem icon={<IconTrash />} label="ลบการประชุมนี้" danger disabled={isRecordingHere} onClick={async () => {
+            onClick={() => run(t.meeting.retranscribing, () => transcribeRecording(id), t.meeting.retranscribed)} />
+          <MenuItem icon={<IconTrash />} label={t.meeting.menuDelete} danger disabled={isRecordingHere} onClick={async () => {
             setMenu(false)
-            if (!(await confirmDialog({ title: 'ลบการประชุมนี้?', body: 'เสียง เอกสาร และสรุปทั้งหมดของการประชุมนี้จะถูกลบออกจากเครื่อง และกู้คืนไม่ได้', ok: 'ลบเลย', danger: true }))) return
+            if (!(await confirmDialog({ title: t.meeting.deleteQ, body: t.meeting.deleteBody, ok: t.meeting.deleteOk, danger: true }))) return
             await deleteMeeting(id)
-            toast('ลบการประชุมแล้ว')
+            toast(t.meeting.deleted)
             nav('/')
           }} />
         </div>

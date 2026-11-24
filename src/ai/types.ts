@@ -22,11 +22,10 @@ export interface ProviderPreset {
   baseUrl?: string
   model: string
   needsKey: boolean
-  free: string
-  thai: 'ดีมาก' | 'ดี' | 'พอใช้'
-  privacy: 'ในเครื่อง' | 'ในเครือข่าย' | 'ส่งออกนอกเครื่อง'
+  thai: 'great' | 'good' | 'fair'
+  privacy: 'local' | 'lan' | 'remote'
+  paid?: boolean
   chunkChars: number
-  note: string
   keyUrl?: string
   sizeMB?: number
   models?: string[]

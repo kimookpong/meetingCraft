@@ -8,7 +8,8 @@ import { db, getSetting, touchMeeting, type AiProviderConfig, type Meeting } fro
 import { asrSend, captureWorkletUrl, ensureAsr, onAsrMessage, recorder } from '../asr/recorder'
 import { createProvider } from '../ai/registry'
 import { primeTts, speak, stopSpeaking, waitSpeechEnd } from '../tts/player'
-import { CHAT_SYSTEM, DEBRIEF_REQUEST, buildChatPrompt, parseReply, visibleWhileStreaming, type Turn } from './prompt'
+import { dateTag, getT } from '../i18n'
+import { chatSystem, debriefRequest, buildChatPrompt, parseReply, visibleWhileStreaming, type Turn } from './prompt'
 
 export type Phase = 'off' | 'starting' | 'listening' | 'hearing' | 'thinking' | 'speaking'
 export interface ChatState {
@@ -41,12 +42,12 @@ async function pickProvider(): Promise<AiProviderConfig> {
   const list = await db.providers.orderBy('createdAt').toArray()
   const def = await getSetting('ai.default', '')
   const p = list.find((x) => x.id === def) ?? list.find((x) => x.baseUrl?.includes('opentyphoon')) ?? list[0]
-  if (!p) throw new Error('ต้องเพิ่ม AI ก่อน (แนะนำ Typhoon API) ที่หน้า ตั้งค่า → AI ช่วยสรุป')
+  if (!p) throw new Error(getT().chat.noAi)
   return p
 }
 
 export async function openChat(m: Meeting, opts: { listen: boolean; debrief?: boolean }) {
-  if (recorder.get().status !== 'idle') throw new Error('ปิดการบันทึกก่อน แล้วค่อยคุยกับผู้ช่วย')
+  if (recorder.get().status !== 'idle') throw new Error(getT().chat.stopRecFirst)
   primeTts() // must run inside the user's tap for iOS audio
   // Mic context too: created before any await so it isn't born "suspended".
   const early = opts.listen ? new AudioContext() : undefined
@@ -64,7 +65,7 @@ export async function openChat(m: Meeting, opts: { listen: boolean; debrief?: bo
     if (opts.listen) await startMic(early)
     else patch({ phase: 'listening' })
     // Post-meeting debrief: the assistant speaks first with a short recap.
-    if (opts.debrief && my === session && !chat.get().turns.length) await respond(DEBRIEF_REQUEST, false)
+    if (opts.debrief && my === session && !chat.get().turns.length) await respond(debriefRequest(), false)
   } catch (e) {
     early?.close()
     patch({ phase: 'off', error: (e as Error).message })
@@ -132,12 +133,12 @@ async function respond(text: string, fromUser: boolean) {
     const prompt = await buildChatPrompt(fresh, history, text, cfg.chunkChars ?? 24000)
     let raw = ''
     const out = await createProvider(cfg).complete({
-      system: CHAT_SYSTEM, prompt, signal: abort.signal,
+      system: chatSystem(), prompt, signal: abort.signal,
       onText: (d) => { raw += d; patch({ draft: visibleWhileStreaming(raw) }) },
     })
     const { reply, notes } = parseReply(out || raw)
     if (notes.length) await saveNotes(notes)
-    patch({ turns: [...chat.get().turns, { role: 'assistant', text: reply || 'บันทึกให้เรียบร้อยแล้วค่ะ', notes }], draft: '' })
+    patch({ turns: [...chat.get().turns, { role: 'assistant', text: reply || getT().chat.noteSaved, notes }], draft: '' })
     if (chat.get().voiceReply && reply) {
       patch({ phase: 'speaking' })
       await speak(reply, 'chat')
@@ -152,8 +153,8 @@ async function respond(text: string, fromUser: boolean) {
 async function saveNotes(notes: string[]) {
   const m = await db.meetings.get(meeting!.id)
   if (!m) return
-  const time = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
-  const add = notes.map((n) => `• [${time} ผู้ช่วย] ${n}`).join('\n')
+  const time = new Date().toLocaleTimeString(dateTag(), { hour: '2-digit', minute: '2-digit' })
+  const add = notes.map((n) => `• [${time} ${getT().chat.noteBy}] ${n}`).join('\n')
   await touchMeeting(m.id, { notes: m.notes ? `${m.notes.trimEnd()}\n${add}` : add })
 }
 

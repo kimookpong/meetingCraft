@@ -9,6 +9,9 @@
     <meta name="author" content="meetingCraft" />
     <meta name="robots" content="index, follow, max-image-preview:large" />
     <link rel="canonical" href="%VITE_SITE_URL%" />
+    <link rel="alternate" hreflang="th" href="%VITE_SITE_URL%?lang=th" />
+    <link rel="alternate" hreflang="en" href="%VITE_SITE_URL%?lang=en" />
+    <link rel="alternate" hreflang="x-default" href="%VITE_SITE_URL%" />
 
     <meta name="application-name" content="meetingCraft" />
     <meta name="apple-mobile-web-app-title" content="meetingCraft" />
@@ -23,6 +26,7 @@
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="meetingCraft" />
     <meta property="og:locale" content="th_TH" />
+    <meta property="og:locale:alternate" content="en_US" />
     <meta property="og:url" content="%VITE_SITE_URL%" />
     <meta property="og:title" content="meetingCraft — จดประชุมแทนคุณ ถอดเสียงไทยและสรุปด้วย AI" />
     <meta property="og:description" content="กดไมค์แล้วคุยตามปกติ ได้ข้อความภาษาไทย มติที่ประชุม และงานที่ต้องทำ พร้อมผู้รับผิดชอบ — ใช้ฟรีบนมือถือ" />
@@ -54,7 +58,7 @@
         "description": "แอปจดบันทึกการประชุมภาษาไทย ถอดเสียงอัตโนมัติ สแกนเอกสาร สรุปด้วย AI และคุยถามตอบด้วยเสียง ข้อมูลเก็บในเครื่องผู้ใช้",
         "applicationCategory": "BusinessApplication",
         "operatingSystem": "Web, Android, iOS, Windows, macOS",
-        "inLanguage": "th",
+        "inLanguage": ["th", "en"],
         "browserRequirements": "Requires a modern browser with JavaScript and microphone access",
         "offers": { "@type": "Offer", "price": "0", "priceCurrency": "THB" },
         "featureList": [
@@ -73,6 +77,8 @@
     <noscript>
       <h1>meetingCraft — บันทึกการประชุม ถอดเสียงภาษาไทย และสรุปด้วย AI</h1>
       <p>แอปจดบันทึกการประชุมภาษาไทย ถอดเสียงอัตโนมัติ สแกนเอกสาร สรุปมติและงานที่ต้องทำด้วย AI และคุยถามตอบด้วยเสียง กรุณาเปิดใช้ JavaScript เพื่อใช้งาน</p>
+      <h2 lang="en">meetingCraft — Meeting notes, Thai speech-to-text and AI summaries</h2>
+      <p lang="en">Record meetings, get live Thai transcription, scan documents with OCR, and get AI summaries of decisions and action items — with a voice assistant. Free, mobile-first, data stays on your device. Please enable JavaScript.</p>
     </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>

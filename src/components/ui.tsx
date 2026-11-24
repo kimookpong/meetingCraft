@@ -1,7 +1,9 @@
 import { useEffect, useId, type ReactNode } from 'react'
+import { useT } from '../i18n'
 
 export function Sheet({ open, onClose, title, children, footer }: { open: boolean; onClose: () => void; title: string; children: ReactNode; footer?: ReactNode }) {
   const id = useId()
+  const t = useT()
   useEffect(() => {
     if (!open) return
     const k = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
@@ -17,7 +19,7 @@ export function Sheet({ open, onClose, title, children, footer }: { open: boolea
         <div className="mx-auto mt-2.5 h-1.5 w-10 rounded-full bg-slate-300 sm:hidden" />
         <div className="flex items-center justify-between gap-2 px-5 pt-3 pb-2">
           <h2 id={id} className="text-lg font-bold">{title}</h2>
-          <button className="btn-ghost -mr-2 min-h-11 px-3 text-sm" onClick={onClose}>ปิด</button>
+          <button className="btn-ghost -mr-2 min-h-11 px-3 text-sm" onClick={onClose}>{t.common.close}</button>
         </div>
         <div className="overflow-y-auto px-5 pb-4">{children}</div>
         {footer && <div className="border-t border-slate-100 px-5 py-3">{footer}</div>}

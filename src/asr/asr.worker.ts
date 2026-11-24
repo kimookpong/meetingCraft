@@ -41,7 +41,7 @@ const normalizeThai = (t: string) => t
   .trim()
 
 async function decode(audio: Float32Array): Promise<string> {
-  if (!cloud) throw new Error('ยังไม่ได้ตั้งค่า Typhoon API')
+  if (!cloud) throw new Error('Typhoon API is not configured')
   const form = new FormData()
   form.append('file', wav16(audio), 'utterance.wav') // must carry audio/wav; octet-stream is rejected
   form.append('model', cloud.model)
@@ -51,7 +51,7 @@ async function decode(audio: Float32Array): Promise<string> {
   const res = await fetch(`${cloud.baseUrl.replace(/\/$/, '')}/audio/transcriptions`, {
     method: 'POST', headers: cloud.apiKey ? { Authorization: `Bearer ${cloud.apiKey}` } : {}, body: form,
   })
-  if (!res.ok) throw new Error(`ถอดเสียงไม่สำเร็จ (HTTP ${res.status}) ${(await res.text()).slice(0, 160)}`)
+  if (!res.ok) throw new Error(`Transcription failed (HTTP ${res.status}) ${(await res.text()).slice(0, 160)}`)
   return normalizeThai(spaced(await res.json()))
 }
 

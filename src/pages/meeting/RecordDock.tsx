@@ -6,6 +6,7 @@ import { IconMic, IconPause, IconPlay, IconStop } from '../../components/icons'
 import { Spinner } from '../../components/ui'
 import { toast } from '../../components/feedback'
 import { fmtClock } from '../../lib/format'
+import { useT } from '../../i18n'
 
 function Level({ db, active }: { db: number; active: boolean }) {
   const v = Math.max(0, Math.min(1, (db + 60) / 50))
@@ -21,6 +22,7 @@ function Level({ db, active }: { db: number; active: boolean }) {
 
 export function RecordDock({ meeting, onStopped }: { meeting: Meeting; onStopped?: () => void }) {
   const r = recorder.use()
+  const t = useT()
   const asr = useAsrConfig()
   const [live, setLive] = useState(true)
   useEffect(() => { getSetting('rec.live', true).then(setLive) }, [])
@@ -31,12 +33,12 @@ export function RecordDock({ meeting, onStopped }: { meeting: Meeting; onStopped
   const starting = here && r.status === 'starting'
 
   const status = !active ? null
-    : r.status === 'paused' ? 'พักไว้ชั่วคราว'
-    : r.asr === 'loading' ? 'กำลังเตรียมตัวถอดเสียง…'
-    : r.asr === 'ready' ? (r.speaking ? 'กำลังฟังและพิมพ์ตาม…' : 'กำลังฟังอยู่ พูดได้เลย')
-    : 'กำลังบันทึกเสียง'
+    : r.status === 'paused' ? t.record.paused
+    : r.asr === 'loading' ? t.record.preparing
+    : r.asr === 'ready' ? (r.speaking ? t.record.hearing : t.record.listening)
+    : t.record.recordingOnly
 
-  const stop = async () => { await stopRecording(); if (onStopped) onStopped(); else toast('บันทึกเรียบร้อย') }
+  const stop = async () => { await stopRecording(); if (onStopped) onStopped(); else toast(t.record.saved) }
 
   return (
     <div className="pb-safe fixed inset-x-0 bottom-0 z-30 border-t border-slate-200/80 bg-white/95 backdrop-blur-lg">
@@ -45,23 +47,23 @@ export function RecordDock({ meeting, onStopped }: { meeting: Meeting; onStopped
 
         {!active ? (
           <div className="flex items-center gap-4">
-            <button disabled={busyElsewhere || starting} aria-label="เริ่มบันทึก"
+            <button disabled={busyElsewhere || starting} aria-label={t.record.start}
               onClick={() => startRecording(meeting.id, meeting.language, live && asrReady)}
               className="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-rose-600 text-white shadow-lg shadow-rose-600/30 transition-colors duration-200 hover:bg-rose-700 disabled:opacity-40">
               {starting ? <Spinner className="h-6 w-6" /> : <IconMic width={28} height={28} />}
             </button>
             <div className="min-w-0 flex-1">
               <div className="text-[16px] font-bold">
-                {busyElsewhere ? 'กำลังบันทึกการประชุมอื่นอยู่' : starting ? 'กำลังเปิดไมโครโฟน…' : meeting.durationMs ? 'แตะเพื่อบันทึกต่อ' : 'แตะเพื่อเริ่มบันทึก'}
+                {busyElsewhere ? t.record.busyElsewhere : starting ? t.record.opening : meeting.durationMs ? t.record.tapResume : t.record.tapStart}
               </div>
               {asrReady ? (
                 <label className="mt-0.5 flex min-h-8 items-center gap-2 text-[13px] text-slate-600">
                   <input type="checkbox" className="h-4 w-4 accent-brand-600" checked={live} onChange={(e) => { setLive(e.target.checked); setSetting('rec.live', e.target.checked) }} />
-                  ถอดเสียงเป็นข้อความทันที
+                  {t.record.liveToggle}
                 </label>
               ) : (
                 <Link href="/settings" onClick={() => sessionStorage.setItem('settings:focus', 'asr')} className="mt-0.5 block text-[13px] text-slate-600 underline decoration-dotted underline-offset-2">
-                  ตอนนี้บันทึกเสียงอย่างเดียว · เชื่อมต่อ Typhoon เพื่อถอดเสียง
+                  {t.record.audioOnly}
                 </Link>
               )}
             </div>
@@ -78,9 +80,9 @@ export function RecordDock({ meeting, onStopped }: { meeting: Meeting; onStopped
             </div>
             <button onClick={pauseRecording} className="flex h-14 w-14 flex-col items-center justify-center rounded-2xl bg-slate-100 text-[11px] font-semibold text-slate-700 transition-colors duration-200 hover:bg-slate-200">
               {r.status === 'paused' ? <IconPlay width={20} /> : <IconPause width={20} />}
-              {r.status === 'paused' ? 'ต่อ' : 'พัก'}
+              {r.status === 'paused' ? t.record.resume : t.record.pause}
             </button>
-            <button onClick={stop} disabled={r.status === 'stopping'} aria-label="หยุดและบันทึก"
+            <button onClick={stop} disabled={r.status === 'stopping'} aria-label={t.record.stop}
               className={`grid h-16 w-16 place-items-center rounded-full bg-rose-600 text-white transition-colors duration-200 hover:bg-rose-700 ${r.status === 'recording' ? 'animate-rec' : ''}`}>
               {r.status === 'stopping' ? <Spinner className="h-6 w-6" /> : <IconStop width={24} height={24} />}
             </button>

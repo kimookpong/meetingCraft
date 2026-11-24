@@ -52,17 +52,28 @@ export function speakable(md: string) {
 export async function speak(text: string, key?: string) {
   stopSpeaking()
   const s = await getSetting<TtsSettings>('tts', DEFAULT_TTS)
-  const engine = s.engine === 'makham' && modelStates.get().tts.status === 'ready' ? 'makham' : 'web-speech'
+  const lang = textLang(text)
+  // MakHam only speaks Thai; English text always uses the system's English voice.
+  const engine = lang === 'th' && s.engine === 'makham' && modelStates.get().tts.status === 'ready' ? 'makham' : 'web-speech'
   ttsState.set({ speaking: true, key, progress: 0 })
-  if (engine === 'web-speech') return speakWeb(speakable(text), s)
+  if (engine === 'web-speech') return speakWeb(speakable(text), s, lang)
   return speakMakham(speakable(text), s.speed, key)
 }
 
-function speakWeb(text: string, s: TtsSettings) {
+/** 'th' when a meaningful share of letters are Thai, otherwise 'en'. */
+export function textLang(text: string): 'th' | 'en' {
+  const thai = (text.match(/[\u0E00-\u0E7F]/g) ?? []).length
+  const latin = (text.match(/[A-Za-z]/g) ?? []).length
+  return thai >= latin * 0.3 && thai > 0 ? 'th' : 'en'
+}
+
+function speakWeb(text: string, s: TtsSettings, lang: 'th' | 'en') {
   const u = new SpeechSynthesisUtterance(text)
-  u.lang = 'th-TH'
+  u.lang = lang === 'th' ? 'th-TH' : 'en-US'
   u.rate = s.speed
-  const v = speechSynthesis.getVoices().find((v) => v.voiceURI === s.voiceURI) ?? speechSynthesis.getVoices().find((v) => v.lang.startsWith('th'))
+  const voices = speechSynthesis.getVoices()
+  const chosen = voices.find((v) => v.voiceURI === s.voiceURI)
+  const v = (chosen && chosen.lang.toLowerCase().startsWith(lang) ? chosen : undefined) ?? voices.find((v) => v.lang.toLowerCase().startsWith(lang))
   if (v) u.voice = v
   u.onend = u.onerror = () => ttsState.set({ speaking: false })
   speechSynthesis.speak(u)
@@ -102,6 +113,6 @@ function speakMakham(text: string, speed: number, key?: string) {
   worker.postMessage({ type: 'speak', id, text, speed })
 }
 
-export function listWebVoices(): SpeechSynthesisVoice[] {
-  return typeof speechSynthesis === 'undefined' ? [] : speechSynthesis.getVoices().filter((v) => v.lang.toLowerCase().startsWith('th'))
+export function listWebVoices(lang: 'th' | 'en' = 'th'): SpeechSynthesisVoice[] {
+  return typeof speechSynthesis === 'undefined' ? [] : speechSynthesis.getVoices().filter((v) => v.lang.toLowerCase().startsWith(lang))
 }

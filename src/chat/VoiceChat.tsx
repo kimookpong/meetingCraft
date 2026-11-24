@@ -4,21 +4,12 @@ import type { Meeting } from '../db/schema'
 import { chat, ask, closeChat, interrupt, micActive, openChat, resetConversation, setVoiceReply, toggleMic, type Phase } from './engine'
 import { IconBack, IconCheck, IconMic, IconSparkles, IconSpeaker } from '../components/icons'
 import { Notice, Spinner } from '../components/ui'
-
-const SUGGESTIONS = [
-  'สรุปมติที่ประชุมให้ฟังหน่อย',
-  'ใครต้องทำอะไรบ้าง และกำหนดเสร็จเมื่อไร',
-  'มีประเด็นไหนที่ยังค้างอยู่',
-  'ช่วยบันทึกว่าคุณสมชายจะส่งใบเสนอราคาวันจันทร์',
-]
-
-const LABEL: Record<Phase, string> = {
-  off: '', starting: 'กำลังเตรียมผู้ช่วย…', listening: 'พูดได้เลย ฉันฟังอยู่', hearing: 'กำลังฟัง…',
-  thinking: 'กำลังคิด…', speaking: 'กำลังตอบ — แตะเพื่อพูดแทรก',
-}
+import { useT } from '../i18n'
 
 export function VoiceChat({ meeting, onClose, debrief = false }: { meeting: Meeting; onClose: () => void; debrief?: boolean }) {
   const s = chat.use()
+  const t = useT()
+  const LABEL: Record<Phase, string> = { off: '', ...t.chat.phase }
   const [text, setText] = useState('')
   const mic = micActive() // re-evaluated on every chat-state update
   const endRef = useRef<HTMLDivElement>(null)
@@ -41,18 +32,18 @@ export function VoiceChat({ meeting, onClose, debrief = false }: { meeting: Meet
   const scale = s.phase === 'hearing' ? 1 + Math.max(0, Math.min(0.25, (s.level + 50) / 160)) : 1
 
   return (
-    <div className="pt-safe pb-safe fixed inset-0 z-[55] flex flex-col bg-canvas" role="dialog" aria-modal aria-label="คุยกับผู้ช่วยการประชุม">
+    <div className="pt-safe pb-safe fixed inset-0 z-[55] flex flex-col bg-canvas" role="dialog" aria-modal aria-label={t.chat.aria}>
       <header className="mx-auto flex w-full max-w-2xl items-center gap-1 px-2 py-2">
-        <button className="btn-ghost min-h-11 px-2.5" onClick={close} aria-label="ปิด"><IconBack /></button>
+        <button className="btn-ghost min-h-11 px-2.5" onClick={close} aria-label={t.common.close}><IconBack /></button>
         <div className="min-w-0 flex-1 px-1">
-          <div className="truncate text-[17px] font-bold">{debrief ? 'คุยสรุปหลังประชุม' : 'คุยกับผู้ช่วย'}</div>
+          <div className="truncate text-[17px] font-bold">{debrief ? t.chat.debriefTitle : t.chat.title}</div>
           <div className="truncate text-[12px] text-slate-600">
             {meeting.title}{s.provider ? ` · ${s.provider}` : ''}
           </div>
         </div>
         <button onClick={() => setVoiceReply(!s.voiceReply)} aria-pressed={s.voiceReply}
           className={`btn min-h-10 px-3 text-[13px] ${s.voiceReply ? 'bg-brand-50 text-brand-700' : 'bg-slate-100 text-slate-600'}`}>
-          <IconSpeaker width={18} />{s.voiceReply ? 'ตอบด้วยเสียง' : 'ปิดเสียงตอบ'}
+          <IconSpeaker width={18} />{s.voiceReply ? t.chat.voiceOn : t.chat.voiceOff}
         </button>
       </header>
 
@@ -60,20 +51,20 @@ export function VoiceChat({ meeting, onClose, debrief = false }: { meeting: Meet
         {needsAi ? (
           <div className="pt-10">
             <Notice tone="warn">{s.error}</Notice>
-            <Link href="/settings" onClick={() => { sessionStorage.setItem('settings:focus', 'ai'); close() }} className="btn-primary mt-4 w-full">ไปเพิ่ม AI</Link>
+            <Link href="/settings" onClick={() => { sessionStorage.setItem('settings:focus', 'ai'); close() }} className="btn-primary mt-4 w-full">{t.chat.addAi}</Link>
           </div>
         ) : s.turns.length === 0 && !s.draft && debrief ? (
           <div className="pt-16 text-center">
             <Spinner className="h-8 w-8 text-accent-500" />
-            <p className="mt-3 text-[15px] text-slate-600">ผู้ช่วยกำลังทบทวนการประชุม…</p>
+            <p className="mt-3 text-[15px] text-slate-600">{t.chat.reviewing}</p>
           </div>
         ) : s.turns.length === 0 && !s.draft ? (
           <div className="pt-6 text-center">
             <div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-2xl bg-accent-100 text-accent-700"><IconSparkles /></div>
-            <h2 className="text-lg font-bold">ถามอะไรเกี่ยวกับการประชุมนี้ก็ได้</h2>
-            <p className="mx-auto mt-1 max-w-xs text-[14px] text-slate-600">หรือบอกให้ช่วย “บันทึก” ข้อมูลเพิ่ม ผู้ช่วยจะจดลงโน้ตของการประชุมให้</p>
+            <h2 className="text-lg font-bold">{t.chat.emptyTitle}</h2>
+            <p className="mx-auto mt-1 max-w-xs text-[14px] text-slate-600">{t.chat.emptyBody}</p>
             <div className="mt-5 flex flex-col gap-2">
-              {SUGGESTIONS.map((q) => (
+              {t.chat.suggestions.map((q) => (
                 <button key={q} onClick={() => send(q)} disabled={busy || s.phase === 'starting'}
                   className="min-h-12 rounded-2xl border border-slate-200 bg-white px-4 text-left text-[15px] transition-colors duration-200 hover:bg-brand-50">
                   {q}
@@ -83,15 +74,15 @@ export function VoiceChat({ meeting, onClose, debrief = false }: { meeting: Meet
           </div>
         ) : (
           <ol className="space-y-3 pt-2" aria-live="polite">
-            {s.turns.map((t, i) => (
-              <li key={i} className={`flex ${t.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[85%] rounded-3xl px-4 py-2.5 text-[16px] leading-relaxed ${t.role === 'user' ? 'rounded-br-lg bg-brand-600 text-white' : 'rounded-bl-lg border border-slate-200 bg-white'}`}>
-                  {t.text}
-                  {!!t.notes?.length && (
+            {s.turns.map((turn, i) => (
+              <li key={i} className={`flex ${turn.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[85%] rounded-3xl px-4 py-2.5 text-[16px] leading-relaxed ${turn.role === 'user' ? 'rounded-br-lg bg-brand-600 text-white' : 'rounded-bl-lg border border-slate-200 bg-white'}`}>
+                  {turn.text}
+                  {!!turn.notes?.length && (
                     <div className="mt-2 space-y-1 border-t border-slate-100 pt-2">
-                      {t.notes.map((n, k) => (
+                      {turn.notes.map((n, k) => (
                         <div key={k} className="flex gap-1.5 text-[13px] text-emerald-700">
-                          <IconCheck width={16} className="mt-0.5 shrink-0" /><span>บันทึกในโน้ตแล้ว: {n}</span>
+                          <IconCheck width={16} className="mt-0.5 shrink-0" /><span>{t.chat.savedNote(n)}</span>
                         </div>
                       ))}
                     </div>
@@ -121,21 +112,21 @@ export function VoiceChat({ meeting, onClose, debrief = false }: { meeting: Meet
             <button
               onClick={() => (busy ? interrupt() : toggleMic())}
               disabled={s.phase === 'starting'}
-              aria-label={busy ? 'หยุดผู้ช่วยแล้วพูด' : mic ? 'ปิดไมค์' : 'เปิดไมค์'}
+              aria-label={busy ? t.chat.interrupt : mic ? t.chat.closeMic : t.chat.openMic}
               style={{ transform: `scale(${scale})` }}
               className={`grid h-20 w-20 place-items-center rounded-full text-white shadow-xl transition-[transform,background-color] duration-150 ${orbTone} ${s.phase === 'speaking' || s.phase === 'hearing' ? 'animate-rec' : ''}`}>
               {s.phase === 'starting' || s.phase === 'thinking' ? <Spinner className="h-7 w-7" /> : <IconMic width={32} height={32} />}
             </button>
             <p className="mt-2 min-h-5 text-[14px] font-medium text-slate-700" role="status">
-              {mic || busy ? LABEL[s.phase] : 'ไมค์ปิดอยู่ — แตะเพื่อพูด หรือพิมพ์ถามด้านล่าง'}
+              {mic || busy ? LABEL[s.phase] : t.chat.micOff}
             </p>
           </div>
           <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); send(text) }}>
-            <label htmlFor="chat-input" className="sr-only">พิมพ์คำถาม</label>
-            <input id="chat-input" className="input flex-1" placeholder="พิมพ์คำถาม หรือข้อมูลที่ต้องการบันทึก" value={text} onChange={(e) => setText(e.target.value)} />
-            <button className="btn-primary px-4" disabled={!text.trim()}>ส่ง</button>
+            <label htmlFor="chat-input" className="sr-only">{t.chat.inputLabel}</label>
+            <input id="chat-input" className="input flex-1" placeholder={t.chat.inputPlaceholder} value={text} onChange={(e) => setText(e.target.value)} />
+            <button className="btn-primary px-4" disabled={!text.trim()}>{t.chat.send}</button>
           </form>
-          {s.turns.length > 0 && <button className="mt-1 min-h-10 w-full text-[13px] text-slate-500 hover:text-slate-700" onClick={resetConversation}>เริ่มบทสนทนาใหม่</button>}
+          {s.turns.length > 0 && <button className="mt-1 min-h-10 w-full text-[13px] text-slate-500 hover:text-slate-700" onClick={resetConversation}>{t.chat.reset}</button>}
         </footer>
       )}
     </div>

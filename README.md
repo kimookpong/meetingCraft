@@ -10,6 +10,8 @@
 | อ่านออกเสียง | [pythainlp/MakHamTTS](https://huggingface.co/pythainlp/MakHamTTS) Paradee int8 (~11 MB) | ในเครื่อง |
 | สรุปการประชุม | Plug-in: Typhoon (แนะนำ), LLM ONNX ในเครื่อง, Gemini, Groq, OpenRouter, Ollama, LM Studio, Claude หรือแบบไม่ใช้ AI | ตามที่เลือก |
 
+รองรับ 2 ภาษา (ไทย / English) — สลับได้ที่หัวหน้าแรก, หน้าแนะนำ หรือ ตั้งค่า; ลิงก์ `?lang=en` / `?lang=th` เปิดเป็นภาษานั้นได้ทันที สรุปและผู้ช่วยตอบตามภาษาที่เลือก
+
 เอกสารวิเคราะห์และออกแบบ: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (รวมผลเปรียบเทียบตัวเลือก AI สำหรับสรุป หัวข้อ 11)
 
 ## เริ่มต้น

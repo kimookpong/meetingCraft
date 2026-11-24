@@ -4,8 +4,11 @@ import { deviceInfo, type DeviceInfo } from '../../lib/device'
 import { downloadBlob, exportBackup, importBackup } from '../../lib/exporters'
 import { fmtBytes } from '../../lib/format'
 import { toast } from '../../components/feedback'
+import { useT } from '../../i18n'
 
 export function StorageSection() {
+  const t = useT()
+  const S = t.settings.storage
   const [d, setD] = useState<DeviceInfo | null>(null)
   const [audio, setAudio] = useState(true)
   const [busy, setBusy] = useState('')
@@ -14,28 +17,28 @@ export function StorageSection() {
   useEffect(() => { refresh() }, [])
 
   return (
-    <Section title="สำรองข้อมูล" desc="ย้ายเครื่องหรือกันข้อมูลหาย">
+    <Section title={S.title} desc={S.desc}>
       <div className="card space-y-3">
         {d?.quota && (
           <div className="text-sm">
-            ใช้ไป {fmtBytes(d.usage ?? 0)} จาก {fmtBytes(d.quota)}
-            <div className="text-xs text-slate-500">{d.persisted ? '✓ เบราว์เซอร์จะไม่ลบข้อมูลอัตโนมัติ' : 'เบราว์เซอร์อาจลบข้อมูลเมื่อพื้นที่เต็ม'}</div>
+            {S.used(fmtBytes(d.usage ?? 0), fmtBytes(d.quota))}
+            <div className="text-xs text-slate-500">{d.persisted ? S.persisted : S.notPersisted}</div>
           </div>
         )}
-        {!d?.persisted && <button className="btn-outline w-full text-sm" onClick={async () => { await navigator.storage.persist(); refresh() }}>ขอให้เก็บข้อมูลถาวร</button>}
-        <Toggle checked={audio} onChange={setAudio} label="รวมไฟล์เสียงในไฟล์สำรอง" hint="ไฟล์จะใหญ่ขึ้นมาก (~115 MB/ชั่วโมง)" />
+        {!d?.persisted && <button className="btn-outline w-full text-sm" onClick={async () => { await navigator.storage.persist(); refresh() }}>{S.persist}</button>}
+        <Toggle checked={audio} onChange={setAudio} label={S.includeAudio} hint={S.includeAudioHint} />
         <div className="grid grid-cols-2 gap-2">
           <button className="btn-primary text-sm" disabled={!!busy} onClick={async () => {
-            setBusy('กำลังสำรอง…')
+            setBusy(S.backingUp)
             try { downloadBlob(await exportBackup(audio), `meetingcraft-backup-${new Date().toISOString().slice(0, 10)}.zip`) } finally { setBusy('') }
-          }}>{busy || 'สำรองข้อมูล'}</button>
-          <button className="btn-outline text-sm" disabled={!!busy} onClick={() => file.current?.click()}>กู้คืนจากไฟล์</button>
+          }}>{busy || S.backup}</button>
+          <button className="btn-outline text-sm" disabled={!!busy} onClick={() => file.current?.click()}>{S.restore}</button>
           <input ref={file} type="file" accept=".zip,application/zip" hidden onChange={async (e) => {
             const f = e.target.files?.[0]
             e.target.value = ''
             if (!f) return
-            setBusy('กำลังกู้คืน…')
-            try { toast(`กู้คืน ${await importBackup(f)} การประชุมแล้ว`) } catch (err) { toast(`กู้คืนไม่สำเร็จ: ${(err as Error).message}`, 'bad') } finally { setBusy(''); refresh() }
+            setBusy(S.restoring)
+            try { toast(S.restored(await importBackup(f))) } catch (err) { toast(S.restoreFailed((err as Error).message), 'bad') } finally { setBusy(''); refresh() }
           }} />
         </div>
       </div>

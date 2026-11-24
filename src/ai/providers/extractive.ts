@@ -5,10 +5,10 @@ import type { CompleteRequest, LlmProvider } from '../types'
  * Offline, no-AI fallback: scores sentences by content-word frequency and pulls
  * out decisions / action items by Thai cue phrases. Expects the raw context in `prompt`.
  */
-const DECISION = /(มติ|ที่ประชุม(เห็นชอบ|อนุมัติ|รับทราบ|มีมติ)|อนุมัติ|เห็นชอบ|ตกลง|สรุปว่า|ให้ดำเนินการ)/
-const ACTION = /(มอบหมาย|รับผิดชอบ|ดำเนินการ|จัดทำ|ติดตาม|ประสาน|ส่ง(ให้|ภายใน)|ภายในวันที่|ภายใน\s*\d|deadline|กำหนดส่ง)/i
-const ISSUE = /(ยังไม่(ได้)?(ข้อ)?สรุป|ค้าง(อยู่)?|รอ(ใบ|การ|ผล|ข้อ|คำ|อนุมัติ|ความ)|ปัญหา|ข้อกังวล|พิจารณาอีกครั้ง|ครั้งหน้า|ครั้งถัดไป)/
-const STOP = new Set('และ หรือ แต่ ที่ ซึ่ง ของ ใน การ ความ ได้ ให้ ไป มา ว่า จะ ก็ คือ เป็น มี ไม่ นี้ นั้น กับ แล้ว ครับ ค่ะ คะ นะ ๆ the a to of'.split(' '))
+const DECISION = /(decided|approved|agreed|resolved|มติ|ที่ประชุม(เห็นชอบ|อนุมัติ|รับทราบ|มีมติ)|อนุมัติ|เห็นชอบ|ตกลง|สรุปว่า|ให้ดำเนินการ)/
+const ACTION = /(assigned|will (send|prepare|follow|check)|responsible|action item|by (monday|tuesday|wednesday|thursday|friday|next week)|มอบหมาย|รับผิดชอบ|ดำเนินการ|จัดทำ|ติดตาม|ประสาน|ส่ง(ให้|ภายใน)|ภายในวันที่|ภายใน\s*\d|deadline|กำหนดส่ง)/i
+const ISSUE = /(not (yet )?decided|pending|open issue|follow[- ]up|next meeting|ยังไม่(ได้)?(ข้อ)?สรุป|ค้าง(อยู่)?|รอ(ใบ|การ|ผล|ข้อ|คำ|อนุมัติ|ความ)|ปัญหา|ข้อกังวล|พิจารณาอีกครั้ง|ครั้งหน้า|ครั้งถัดไป)/
+const STOP = new Set('and or but that which of in is are was the a to for on with it this และ หรือ แต่ ที่ ซึ่ง ของ ใน การ ความ ได้ ให้ ไป มา ว่า จะ ก็ คือ เป็น มี ไม่ นี้ นั้น กับ แล้ว ครับ ค่ะ คะ นะ ๆ the a to of'.split(' '))
 
 function sentences(text: string) {
   return text
@@ -23,7 +23,12 @@ function words(s: string): string[] {
   return s.split(/\s+/)
 }
 
-export function extractiveSummary(transcript: string, docs: string, title: string): string {
+const HEADINGS = {
+  th: { title: 'สรุปการประชุม', note: 'สรุปอัตโนมัติแบบดึงประโยค (ไม่ใช้ AI) — ควรตรวจทานก่อนเผยแพร่', overview: 'ภาพรวม', noData: 'ไม่มีข้อมูลเพียงพอ', decisions: 'มติที่ประชุม', noDecisions: 'ไม่พบถ้อยคำที่ระบุมติ', actions: 'งานที่ต้องดำเนินการ (Action items)', noActions: 'ไม่พบการมอบหมายงาน', issues: 'ประเด็นค้าง / ติดตาม', docs: 'เอกสารประกอบ' },
+  en: { title: 'Meeting summary', note: 'Automatic extractive summary (no AI) — please review before sharing', overview: 'Overview', noData: 'Not enough information', decisions: 'Decisions', noDecisions: 'No decision statements found', actions: 'Action items', noActions: 'No assignments found', issues: 'Open issues / follow-ups', docs: 'Documents' },
+}
+
+export function extractiveSummary(transcript: string, docs: string, title: string, lang: 'th' | 'en' = 'th'): string {
   const sents = sentences(transcript)
   const freq = new Map<string, number>()
   for (const s of sents) for (const w of words(s)) if (!STOP.has(w) && w.length > 1) freq.set(w, (freq.get(w) ?? 0) + 1)
@@ -39,18 +44,19 @@ export function extractiveSummary(transcript: string, docs: string, title: strin
   const actions = uniq(sents.filter((s) => ACTION.test(s) && !DECISION.test(s)))
   const issues = uniq(sents.filter((s) => ISSUE.test(s) && !ACTION.test(s) && !DECISION.test(s)))
   const list = (xs: string[], empty: string) => (xs.length ? xs.map((x) => `- ${x}`).join('\n') : `- ${empty}`)
+  const H = HEADINGS[lang]
   return [
-    `# สรุปการประชุม: ${title}`,
-    '> สรุปอัตโนมัติแบบดึงประโยค (ไม่ใช้ AI) — ควรตรวจทานก่อนเผยแพร่',
-    '## ภาพรวม',
-    list(top.map((t) => t.s), 'ไม่มีข้อมูลเพียงพอ'),
-    '## มติที่ประชุม',
-    list(decisions, 'ไม่พบถ้อยคำที่ระบุมติ'),
-    '## งานที่ต้องดำเนินการ (Action items)',
-    list(actions, 'ไม่พบการมอบหมายงาน'),
-    '## ประเด็นค้าง / ติดตาม',
+    `# ${H.title}: ${title}`,
+    `> ${H.note}`,
+    `## ${H.overview}`,
+    list(top.map((t) => t.s), H.noData),
+    `## ${H.decisions}`,
+    list(decisions, H.noDecisions),
+    `## ${H.actions}`,
+    list(actions, H.noActions),
+    `## ${H.issues}`,
     list(issues, '-'),
-    docs ? `## เอกสารประกอบ\n${docs.split('\n').filter(Boolean).slice(0, 5).map((l) => `- ${l.slice(0, 160)}`).join('\n')}` : '',
+    docs ? `## ${H.docs}\n${docs.split('\n').filter(Boolean).slice(0, 5).map((l) => `- ${l.slice(0, 160)}`).join('\n')}` : '',
   ].filter(Boolean).join('\n\n')
 }
 

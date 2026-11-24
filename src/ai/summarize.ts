@@ -1,21 +1,24 @@
-import { db, getSetting, uid, type AiProviderConfig, type Meeting } from '../db/schema'
+import { db, uid, type AiProviderConfig, type Meeting } from '../db/schema'
 import { createProvider } from './registry'
 import { extractiveSummary } from './providers/extractive'
-import { DEFAULT_FORMAT, DEFAULT_SYSTEM_PROMPT, MAP_PROMPT, fill } from './prompts'
+import { CONTEXT_LABELS, fill, getPrompt, mapPrompt } from './prompts'
+import { dateTag, getT, locale } from '../i18n'
+import { providerLabel } from './labels'
 import { fmtClock } from '../lib/format'
 
 export async function buildContext(meeting: Meeting) {
+  const L = CONTEXT_LABELS[locale.get()]
   const segs = await db.segments.where('[meetingId+startMs]').between([meeting.id, -Infinity], [meeting.id, Infinity]).toArray()
   const docs = await db.documents.where('meetingId').equals(meeting.id).sortBy('createdAt')
   const transcript = segs.map((s) => `[${fmtClock(s.startMs)}] ${s.text}`).join('\n')
-  const docText = docs.map((d, i) => `--- เอกสาร ${i + 1}: ${d.title} ---\n${d.text}`).join('\n\n')
+  const docText = docs.map((d, i) => `--- ${L.doc} ${i + 1}: ${d.title} ---\n${d.text}`).join('\n\n')
   const header = [
-    `ชื่อการประชุม: ${meeting.title}`,
-    `วันที่: ${new Date(meeting.startedAt).toLocaleString('th-TH', { dateStyle: 'long', timeStyle: 'short' })}`,
-    meeting.location ? `สถานที่: ${meeting.location}` : '',
-    meeting.attendees.length ? `ผู้เข้าร่วม: ${meeting.attendees.join(', ')}` : '',
-    meeting.agenda ? `วาระ:\n${meeting.agenda}` : '',
-    meeting.notes ? `บันทึกเพิ่มเติมของผู้จด:\n${meeting.notes}` : '',
+    `${L.title}: ${meeting.title}`,
+    `${L.date}: ${new Date(meeting.startedAt).toLocaleString(dateTag(), { dateStyle: 'long', timeStyle: 'short' })}`,
+    meeting.location ? `${L.place}: ${meeting.location}` : '',
+    meeting.attendees.length ? `${L.people}: ${meeting.attendees.join(', ')}` : '',
+    meeting.agenda ? `${L.agenda}:\n${meeting.agenda}` : '',
+    meeting.notes ? `${L.notes}:\n${meeting.notes}` : '',
   ].filter(Boolean).join('\n')
   return { header, transcript, docText }
 }
@@ -41,16 +44,17 @@ export async function summarizeMeeting(
   signal?: AbortSignal,
 ) {
   const { header, transcript, docText } = await buildContext(meeting)
-  if (!transcript.trim() && !docText.trim() && !meeting.notes) throw new Error('ยังไม่มีบันทึกเสียง เอกสาร หรือโน้ตให้สรุป')
+  if (!transcript.trim() && !docText.trim() && !meeting.notes) throw new Error(getT().summary.nothing)
 
   let markdown: string
   if (cfg.kind === 'extractive') {
-    markdown = extractiveSummary(transcript + '\n' + (meeting.notes ?? ''), docText, meeting.title)
+    markdown = extractiveSummary(transcript + '\n' + (meeting.notes ?? ''), docText, meeting.title, locale.get())
     onProgress({ stage: 'done', text: markdown })
   } else {
     const provider = createProvider(cfg)
-    const system = await getSetting('prompt.system', DEFAULT_SYSTEM_PROMPT)
-    const format = fill(await getSetting('prompt.format', DEFAULT_FORMAT), { title: meeting.title })
+    const L = CONTEXT_LABELS[locale.get()]
+    const system = await getPrompt('system')
+    const format = fill(await getPrompt('format'), { title: meeting.title })
     const budget = cfg.chunkChars ?? 24000
     let body = transcript
     const chunks = split(transcript, budget)
@@ -58,25 +62,31 @@ export async function summarizeMeeting(
       // Map: condense each part, then reduce over the condensed notes.
       const notes: string[] = []
       for (let i = 0; i < chunks.length; i++) {
-        onProgress({ stage: `สรุปช่วงที่ ${i + 1}/${chunks.length}`, text: '' })
+        onProgress({ stage: getT().summary.stage.part(i + 1, chunks.length), text: '' })
         notes.push(await provider.complete({
           system, signal,
-          prompt: fill(MAP_PROMPT, { title: meeting.title, part: i + 1, parts: chunks.length, text: chunks[i] }),
+          prompt: fill(mapPrompt(), { title: meeting.title, part: i + 1, parts: chunks.length, text: chunks[i] }),
         }))
       }
-      body = notes.map((n, i) => `### ช่วงที่ ${i + 1}\n${n}`).join('\n\n')
+      body = notes.map((n, i) => `### ${L.part} ${i + 1}\n${n}`).join('\n\n')
     }
-    const docs = docText ? `\n\nข้อความจากเอกสารประกอบ (OCR):\n${docText.slice(0, Math.max(2000, budget / 3))}` : ''
-    const prompt = `${header}\n\n${chunks.length > 1 ? 'บันทึกย่อรายช่วง' : 'บันทึกถอดเสียง'}:\n${body || '(ไม่มี)'}${docs}\n\n${format}`
+    const docs = docText ? `
+
+${L.ocr}:
+${docText.slice(0, Math.max(2000, budget / 3))}` : ''
+    const prompt = `${header}
+
+${chunks.length > 1 ? L.partNotes : L.transcript}:
+${body || L.none}${docs}\n\n${format}`
     let text = ''
-    onProgress({ stage: 'กำลังเขียนสรุป', text })
+    onProgress({ stage: getT().summary.stage.writing, text })
     markdown = await provider.complete({
       system, prompt, signal,
-      onText: (d) => { text += d; onProgress({ stage: 'กำลังเขียนสรุป', text }) },
+      onText: (d) => { text += d; onProgress({ stage: getT().summary.stage.writing, text }) },
     })
   }
   const summary = {
-    id: uid(), meetingId: meeting.id, providerId: cfg.id, providerLabel: cfg.label, model: cfg.model,
+    id: uid(), meetingId: meeting.id, providerId: cfg.id, providerLabel: providerLabel(cfg, getT()), model: cfg.model,
     createdAt: Date.now(), markdown,
   }
   await db.summaries.add(summary)

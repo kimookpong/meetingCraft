@@ -26,7 +26,7 @@ async function load(model: string) {
   if (gen && loaded === model) return post({ type: 'ready', model })
   await gen?.dispose()
   gen = null
-  if (!('gpu' in navigator)) throw new Error('อุปกรณ์นี้ไม่รองรับ WebGPU — ใช้ AI ผ่าน API หรือ Ollama แทน')
+  if (!('gpu' in navigator)) throw new Error('WebGPU is not available on this device — use an API provider or Ollama instead')
   gen = (await pipeline('text-generation', model, {
     device: 'webgpu',
     dtype: 'q4f16',
@@ -39,7 +39,7 @@ async function load(model: string) {
 }
 
 async function generate(id: number, system: string, prompt: string, maxNewTokens: number) {
-  if (!gen) throw new Error('ยังไม่ได้โหลดโมเดล')
+  if (!gen) throw new Error('Model not loaded')
   const noThink = /qwen3/i.test(loaded) ? ' /no_think' : ''
   let text = ''
   const streamer = new TextStreamer(gen.tokenizer, {

@@ -1,3 +1,5 @@
+import { dateTag, getT } from '../i18n'
+
 export function fmtClock(ms: number) {
   const s = Math.max(0, Math.floor(ms / 1000))
   const h = Math.floor(s / 3600)
@@ -14,15 +16,19 @@ export function fmtBytes(n: number) {
 }
 
 export function fmtDate(t: number) {
-  return new Date(t).toLocaleString('th-TH', { day: 'numeric', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' })
+  return new Date(t).toLocaleString(dateTag(), { day: 'numeric', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' })
+}
+
+export function fmtTime(t: number) {
+  return new Date(t).toLocaleTimeString(dateTag(), { hour: '2-digit', minute: '2-digit' }) + getT().meta.timeSuffix
 }
 
 export function relDay(t: number) {
   const d = new Date(t)
   const today = new Date()
   const diff = Math.floor((new Date(today.toDateString()).getTime() - new Date(d.toDateString()).getTime()) / 86400000)
-  if (diff === 0) return 'วันนี้'
-  if (diff === 1) return 'เมื่อวาน'
-  if (diff < 7) return d.toLocaleDateString('th-TH', { weekday: 'long' })
-  return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })
+  if (diff === 0) return getT().common.today
+  if (diff === 1) return getT().common.yesterday
+  if (diff < 7) return d.toLocaleDateString(dateTag(), { weekday: 'long' })
+  return d.toLocaleDateString(dateTag(), { day: 'numeric', month: 'long', year: 'numeric' })
 }

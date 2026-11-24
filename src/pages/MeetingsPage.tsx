@@ -7,21 +7,24 @@ import { MODELS, totalSize, type ModelKey } from '../models/registry'
 import { Empty, Progress, Spinner } from '../components/ui'
 import { ArtRecord, ArtWave } from '../components/art'
 import { IconCamera, IconCheck, IconChevron, IconClock, IconDoc, IconMic, IconPin, IconSearch, IconShield, IconSparkles, IconUsers } from '../components/icons'
-import { fmtBytes, fmtClock, relDay } from '../lib/format'
+import { fmtBytes, fmtClock, fmtTime, relDay } from '../lib/format'
 import { useAsrConfig } from '../asr/recorder'
 import { startNewMeeting } from '../lib/actions'
 import { Logo } from '../components/Logo'
+import { LangToggle } from '../components/LangToggle'
+import { useT, type Dict } from '../i18n'
 
-function greeting() {
+function greeting(t: Dict) {
   const h = new Date().getHours()
-  if (h < 11) return 'สวัสดีตอนเช้า'
-  if (h < 13) return 'สวัสดีตอนเที่ยง'
-  if (h < 17) return 'สวัสดีตอนบ่าย'
-  return 'สวัสดีตอนเย็น'
+  if (h < 11) return t.home.morning
+  if (h < 13) return t.home.noon
+  if (h < 17) return t.home.afternoon
+  return t.home.evening
 }
 
 export function MeetingsPage() {
   const [, nav] = useLocation()
+  const t = useT()
   const [q, setQ] = useState('')
   const meetings = useLiveQuery(() => db.meetings.orderBy('updatedAt').reverse().toArray(), [])
   const counts = useLiveQuery(async () => {
@@ -51,10 +54,10 @@ export function MeetingsPage() {
       <header className="mx-auto max-w-2xl px-5 pt-[calc(env(safe-area-inset-top)+1.75rem)]">
         <div className="mb-4 flex items-center justify-between">
           <Logo size={34} />
-          <span className="chip bg-emerald-50 text-emerald-700"><IconShield width={14} />ข้อมูลอยู่ในเครื่อง</span>
+          <LangToggle />
         </div>
-        <p className="text-[15px] font-medium text-slate-600">{greeting()}</p>
-        <h1 className="text-[26px] leading-tight font-bold">วันนี้มีประชุมอะไรบ้าง?</h1>
+        <p className="text-[15px] font-medium text-slate-600">{greeting(t)}</p>
+        <h1 className="text-[26px] leading-tight font-bold">{t.home.headline}</h1>
       </header>
 
       <main className="mx-auto max-w-2xl px-4 pt-4">
@@ -62,11 +65,11 @@ export function MeetingsPage() {
         <div className="relative mb-4 overflow-hidden rounded-[1.5rem] bg-brand-600 p-5 text-white">
           <ArtWave className="pointer-events-none absolute top-4 right-4 h-10 w-32 opacity-25" />
           <div className="relative">
-            <div className="text-lg font-bold">เริ่มประชุมใหม่</div>
-            <p className="mt-0.5 max-w-[16rem] text-[14px] text-brand-100">กดแล้วพูดได้เลย ระบบจะถอดเสียงและช่วยสรุปให้</p>
+            <div className="text-lg font-bold">{t.home.heroTitle}</div>
+            <p className="mt-0.5 max-w-[16rem] text-[14px] text-brand-100">{t.home.heroBody}</p>
             <div className="mt-4 flex flex-wrap gap-2">
-              <button onClick={() => startNewMeeting(nav)} className="btn bg-white text-brand-700 hover:bg-brand-50"><IconMic /> บันทึกเสียง</button>
-              <button onClick={() => startNewMeeting(nav, 'docs')} className="btn bg-white/15 text-white hover:bg-white/25"><IconCamera /> ถ่ายเอกสาร</button>
+              <button onClick={() => startNewMeeting(nav)} className="btn bg-white text-brand-700 hover:bg-brand-50"><IconMic /> {t.home.record}</button>
+              <button onClick={() => startNewMeeting(nav, 'docs')} className="btn bg-white/15 text-white hover:bg-white/25"><IconCamera /> {t.home.scan}</button>
             </div>
           </div>
         </div>
@@ -76,22 +79,22 @@ export function MeetingsPage() {
         {hasAny && (
           <div className="relative mt-6 mb-4">
             <IconSearch className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-slate-500" width={20} />
-            <label htmlFor="search" className="sr-only">ค้นหาการประชุม</label>
-            <input id="search" type="search" className="input pl-11" placeholder="ค้นหาชื่อ สถานที่ หรือผู้เข้าร่วม" value={q} onChange={(e) => setQ(e.target.value)} />
+            <label htmlFor="search" className="sr-only">{t.home.searchLabel}</label>
+            <input id="search" type="search" className="input pl-11" placeholder={t.home.searchPlaceholder} value={q} onChange={(e) => setQ(e.target.value)} />
           </div>
         )}
 
         {meetings && !hasAny && (
-          <Empty art={<ArtRecord />} title="ยังไม่มีบันทึกการประชุม">
-            ลองกดปุ่มไมค์สีน้ำเงินด้านล่างดูสิ — แค่วางมือถือไว้กลางโต๊ะ แล้วคุยกันตามปกติ
+          <Empty art={<ArtRecord />} title={t.home.emptyTitle}>
+            {t.home.emptyBody}
             <div className="mt-4 flex items-center justify-center gap-1.5 text-[13px] font-medium text-emerald-700">
-              <IconShield width={16} /> บันทึกทั้งหมดเก็บไว้ในเครื่องนี้
+              <IconShield width={16} /> {t.home.emptyPrivacy}
             </div>
           </Empty>
         )}
 
         {hasAny && groups.length === 0 && (
-          <p className="py-10 text-center text-slate-600">ไม่พบการประชุมที่ตรงกับ “{q}”</p>
+          <p className="py-10 text-center text-slate-600">{t.home.noMatch(q)}</p>
         )}
 
         {groups.map(([day, list]) => (
@@ -109,15 +112,15 @@ export function MeetingsPage() {
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-[16px] font-semibold">{m.title}</div>
                         <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[13px] text-slate-600">
-                          <span className="inline-flex items-center gap-1"><IconClock width={14} />{new Date(m.startedAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.{m.durationMs > 0 && ` · ${fmtClock(m.durationMs)}`}</span>
+                          <span className="inline-flex items-center gap-1"><IconClock width={14} />{fmtTime(m.startedAt)}{m.durationMs > 0 && ` · ${fmtClock(m.durationMs)}`}</span>
                           {m.location && <span className="inline-flex items-center gap-1"><IconPin width={14} />{m.location}</span>}
-                          {m.attendees.length > 0 && <span className="inline-flex items-center gap-1"><IconUsers width={14} />{m.attendees.length} คน</span>}
+                          {m.attendees.length > 0 && <span className="inline-flex items-center gap-1"><IconUsers width={14} />{t.common.people(m.attendees.length)}</span>}
                         </div>
                         <div className="mt-1.5 flex flex-wrap gap-1.5">
-                          {m.status === 'recording' && <span className="chip bg-rose-100 text-rose-700">กำลังบันทึก</span>}
-                          {c?.y && <span className="chip bg-accent-100 text-accent-700">สรุปแล้ว</span>}
-                          {!!c?.d && <span className="chip">{c.d} เอกสาร</span>}
-                          {!c?.s && !c?.d && m.status !== 'recording' && <span className="chip">ยังว่างอยู่</span>}
+                          {m.status === 'recording' && <span className="chip bg-rose-100 text-rose-700">{t.home.chipRecording}</span>}
+                          {c?.y && <span className="chip bg-accent-100 text-accent-700">{t.home.chipSummarized}</span>}
+                          {!!c?.d && <span className="chip">{t.home.chipDocs(c.d)}</span>}
+                          {!c?.s && !c?.d && m.status !== 'recording' && <span className="chip">{t.home.chipEmpty}</span>}
                         </div>
                       </div>
                       <IconChevron className="shrink-0 text-slate-400" width={20} />
@@ -137,12 +140,13 @@ export function MeetingsPage() {
 function SetupChecklist() {
   const models = modelStates.use()
   const asr = useAsrConfig()
+  const t = useT()
   const [dismissed, setDismissed] = useState<boolean | null>(null)
   useEffect(() => { getSetting('setup.dismissed', false).then(setDismissed) }, [])
 
   const steps: { key: ModelKey; title: string; desc: string }[] = [
-    { key: 'ocr', title: 'อ่านข้อความจากรูป', desc: 'ถ่ายเอกสารแล้วได้ข้อความ' },
-    { key: 'tts', title: 'อ่านออกเสียง', desc: 'ฟังสรุปแทนการอ่าน' },
+    { key: 'ocr', title: t.setup.ocrTitle, desc: t.setup.ocrDesc },
+    { key: 'tts', title: t.setup.ttsTitle, desc: t.setup.ttsDesc },
   ]
   const typhoon = !!asr?.available
   const ready = steps.filter((s) => models[s.key].status === 'ready').length + (typhoon ? 1 : 0)
@@ -152,24 +156,24 @@ function SetupChecklist() {
   return (
     <section className="card mb-2" aria-labelledby="setup-title">
       <div className="mb-1 flex items-center justify-between">
-        <h2 id="setup-title" className="font-bold">เตรียมความพร้อม</h2>
-        <span className="text-[13px] font-semibold text-brand-700">{ready}/{total} เสร็จแล้ว</span>
+        <h2 id="setup-title" className="font-bold">{t.setup.title}</h2>
+        <span className="text-[13px] font-semibold text-brand-700">{t.setup.done(ready, total)}</span>
       </div>
-      <p className="hint mb-3 mt-0">ทำครั้งเดียว ใช้ได้ทุกการประชุม</p>
-      <Progress value={ready / total} className="mb-3" label="ความพร้อมของระบบ" />
+      <p className="hint mb-3 mt-0">{t.setup.hint}</p>
+      <Progress value={ready / total} className="mb-3" label={t.setup.progress} />
       <ul className="divide-y divide-slate-100">
         <li className="flex min-h-14 items-center gap-3 py-2">
           <StepDot done={typhoon} />
           <div className="min-w-0 flex-1">
-            <div className="text-[15px] font-semibold">เชื่อมต่อ Typhoon</div>
-            <div className="text-[13px] text-slate-600">ถอดเสียง สรุป และคุยกับผู้ช่วย · ใช้ฟรี</div>
+            <div className="text-[15px] font-semibold">{t.setup.typhoonTitle}</div>
+            <div className="text-[13px] text-slate-600">{t.setup.typhoonDesc}</div>
           </div>
-          {!typhoon && <Link href="/settings" onClick={() => sessionStorage.setItem('settings:focus', 'asr')} className="btn-soft min-h-10 px-4 text-sm">เชื่อมต่อ</Link>}
+          {!typhoon && <Link href="/settings" onClick={() => sessionStorage.setItem('settings:focus', 'asr')} className="btn-soft min-h-10 px-4 text-sm">{t.common.connect}</Link>}
         </li>
         {steps.map((s) => <StepRow key={s.key} k={s.key} title={s.title} desc={s.desc} state={models[s.key]} />)}
       </ul>
       <button className="mt-1 min-h-11 w-full text-center text-[13px] font-medium text-slate-500 hover:text-slate-700" onClick={() => { setSetting('setup.dismissed', true); setDismissed(true) }}>
-        ไว้ทีหลัง
+        {t.common.later}
       </button>
     </section>
   )
@@ -182,6 +186,7 @@ function StepDot({ done }: { done: boolean }) {
 }
 
 function StepRow({ k, title, desc, state }: { k: ModelKey; title: string; desc: string; state: ModelState }) {
+  const t = useT()
   const size = fmtBytes(totalSize(MODELS[k]))
   return (
     <li className="flex min-h-14 items-center gap-3 py-2">
@@ -189,11 +194,11 @@ function StepRow({ k, title, desc, state }: { k: ModelKey; title: string; desc: 
       <div className="min-w-0 flex-1">
         <div className="text-[15px] font-semibold">{title}</div>
         {state.status === 'downloading'
-          ? <div className="mt-1"><Progress value={state.loaded / state.total} label={`ดาวน์โหลด${title}`} /><div className="mt-0.5 text-[12px] text-slate-600">{fmtBytes(state.loaded)} จาก {fmtBytes(state.total)}</div></div>
-          : <div className="text-[13px] text-slate-600">{state.status === 'error' ? 'ดาวน์โหลดสะดุด — กดเพื่อทำต่อ' : `${desc} · ${size}`}</div>}
+          ? <div className="mt-1"><Progress value={state.loaded / state.total} label={t.setup.downloading(title)} /><div className="mt-0.5 text-[12px] text-slate-600">{t.common.of(fmtBytes(state.loaded), fmtBytes(state.total))}</div></div>
+          : <div className="text-[13px] text-slate-600">{state.status === 'error' ? t.setup.stalled : `${desc} · ${size}`}</div>}
       </div>
       {(state.status === 'absent' || state.status === 'error') && (
-        <button className="btn-soft min-h-10 px-4 text-sm" onClick={() => downloadModel(k).catch(() => {})}>ดาวน์โหลด</button>
+        <button className="btn-soft min-h-10 px-4 text-sm" onClick={() => downloadModel(k).catch(() => {})}>{t.common.download}</button>
       )}
       {state.status === 'downloading' && <Spinner className="h-5 w-5 text-brand-600" />}
     </li>

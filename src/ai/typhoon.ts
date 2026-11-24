@@ -1,4 +1,5 @@
 import { db, setSetting, uid } from '../db/schema'
+import { getT } from '../i18n'
 import { presetFor } from './presets'
 
 /** One-step Typhoon setup: verify the key, save the provider, make it the default summarizer. */
@@ -14,8 +15,8 @@ export async function connectTyphoon(apiKey: string) {
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ model: cfg.model, max_tokens: 1, messages: [{ role: 'user', content: 'hi' }] }),
   })
-  if (res.status === 401 || res.status === 403) throw new Error('API key ไม่ถูกต้องหรือถูกยกเลิกแล้ว')
-  if (!res.ok) throw new Error(`Typhoon ตอบกลับ HTTP ${res.status}`)
+  if (res.status === 401 || res.status === 403) throw new Error(getT().settings.asr.badKey)
+  if (!res.ok) throw new Error(getT().settings.asr.httpErr(res.status))
   await db.providers.put(cfg)
   await setSetting('ai.default', cfg.id) // the user explicitly chose their own key
   return cfg

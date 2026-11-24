@@ -17,5 +17,5 @@ export function createProvider(cfg: AiProviderConfig): LlmProvider {
 
 export const EXTRACTIVE_ID = 'builtin-extractive'
 export const builtinExtractive: AiProviderConfig = {
-  id: EXTRACTIVE_ID, kind: 'extractive', label: 'สรุปแบบดึงประโยค (ไม่ใช้ AI)', model: 'extractive-th', createdAt: 0,
+  id: EXTRACTIVE_ID, kind: 'extractive', label: 'Extractive', model: 'extractive-th', createdAt: 0,
 }

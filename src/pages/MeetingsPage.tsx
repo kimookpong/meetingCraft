@@ -48,7 +48,7 @@ export function MeetingsPage() {
 
   return (
     <div className="min-h-dvh pb-32">
-      <header className="pt-safe mx-auto max-w-2xl px-5 pt-5">
+      <header className="mx-auto max-w-2xl px-5 pt-[calc(env(safe-area-inset-top)+1.75rem)]">
         <div className="mb-4 flex items-center justify-between">
           <Logo size={34} />
           <span className="chip bg-emerald-50 text-emerald-700"><IconShield width={14} />ข้อมูลอยู่ในเครื่อง</span>

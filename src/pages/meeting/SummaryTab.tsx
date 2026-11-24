@@ -15,7 +15,8 @@ import { speak, stopSpeaking, ttsState } from '../../tts/player'
 import { fmtBytes, fmtDate } from '../../lib/format'
 import type { AiProviderConfig } from '../../db/schema'
 
-const hostOf = (c: AiProviderConfig) => (c.baseUrl ? new URL(c.baseUrl).host : c.kind === 'anthropic' ? 'api.anthropic.com' : '')
+/** Where data goes, in user terms (the built-in proxy is shown simply as Typhoon). */
+const hostOf = (c: AiProviderConfig) => (c.managed ? 'Typhoon' : c.baseUrl ? new URL(c.baseUrl).host : c.kind === 'anthropic' ? 'api.anthropic.com' : '')
 
 export function SummaryTab({ meeting, onGoTranscript }: { meeting: Meeting; onGoTranscript: () => void }) {
   const providers = useLiveQuery(() => db.providers.orderBy('createdAt').toArray(), [])

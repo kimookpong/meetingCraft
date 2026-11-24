@@ -31,18 +31,42 @@ async function init() {
   session = await ort.InferenceSession.create(bytes, { executionProviders: ['wasm'], graphOptimizationLevel: 'all' })
 }
 
-function chunks(text: string): string[] {
-  const sentences = text.split(/(?<=[.!?…\n])\s+|\n+|(?<=[ๆฯ])\s+|\s{2,}/).map((s) => s.trim()).filter(Boolean)
-  const out: string[] = []
-  for (const s of sentences) {
-    let ps = g2p!.convert(s)
+/** Pause lengths (ms) after a phrase space, a sentence end and a line break. */
+const PAUSE = { phrase: 180, sentence: 350, line: 500 }
+const MIN_PHRASE = 14 // merge shorter fragments into the next one so intonation stays natural
+
+/**
+ * Split text into speakable pieces with a pause after each. Thai marks phrase boundaries
+ * with spaces, so every space becomes a short breath instead of one long run-on sentence.
+ */
+function chunks(text: string): { ph: string; pause: number }[] {
+  const pieces: { t: string; pause: number }[] = []
+  for (const line of text.split(/\n+/).map((l) => l.trim()).filter(Boolean)) {
+    const sentences = line.split(/(?<=[.!?…ฯ])\s+/).filter(Boolean)
+    sentences.forEach((sent, si) => {
+      const phrases = sent.split(/\s+/).filter(Boolean)
+      let buf = ''
+      phrases.forEach((p, pi) => {
+        buf = buf ? `${buf} ${p}` : p
+        const last = pi === phrases.length - 1
+        if ([...buf].length >= MIN_PHRASE || last) {
+          const pause = !last ? PAUSE.phrase : si < sentences.length - 1 ? PAUSE.sentence : PAUSE.line
+          pieces.push({ t: buf, pause })
+          buf = ''
+        }
+      })
+    })
+  }
+  const out: { ph: string; pause: number }[] = []
+  for (const { t, pause } of pieces) {
+    let ps = g2p!.convert(t)
     while (ps.length > MAX_PHONEMES) {
       let cut = ps.lastIndexOf(' ', MAX_PHONEMES)
       if (cut <= 0) cut = MAX_PHONEMES
-      out.push(ps.slice(0, cut).trim())
+      out.push({ ph: ps.slice(0, cut).trim(), pause: PAUSE.phrase })
       ps = ps.slice(cut).trim()
     }
-    if (ps) out.push(ps)
+    if (ps) out.push({ ph: ps, pause })
   }
   return out
 }
@@ -66,9 +90,9 @@ self.onmessage = async (e: MessageEvent<TtsIn>) => {
     const parts = chunks(text)
     let samples = 0
     for (let i = 0; i < parts.length; i++) {
-      const audio = new Float32Array(await synth(parts[i], speed))
+      const audio = new Float32Array(await synth(parts[i].ph, speed))
       samples += audio.length
-      post({ type: 'chunk', id, audio, sampleRate, index: i, total: parts.length }, [audio.buffer])
+      post({ type: 'chunk', id, audio, sampleRate, index: i, total: parts.length, pauseMs: parts[i].pause / speed }, [audio.buffer])
     }
     post({ type: 'done', id, rtf: (performance.now() - t0) / 1000 / Math.max(samples / sampleRate, 0.01) })
   } catch (err) {

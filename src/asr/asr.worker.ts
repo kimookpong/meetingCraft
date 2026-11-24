@@ -45,11 +45,32 @@ async function decode(audio: Float32Array): Promise<string> {
   const form = new FormData()
   form.append('file', wav16(audio), 'utterance.wav') // must carry audio/wav; octet-stream is rejected
   form.append('model', cloud.model)
+  // Ask for phrase timestamps so we can put spaces where the speaker paused.
+  form.append('response_format', 'verbose_json')
+  form.append('timestamp_granularities[]', 'word')
   const res = await fetch(`${cloud.baseUrl.replace(/\/$/, '')}/audio/transcriptions`, {
     method: 'POST', headers: cloud.apiKey ? { Authorization: `Bearer ${cloud.apiKey}` } : {}, body: form,
   })
   if (!res.ok) throw new Error(`ถอดเสียงไม่สำเร็จ (HTTP ${res.status}) ${(await res.text()).slice(0, 160)}`)
-  return normalizeThai(String((await res.json()).text ?? ''))
+  return normalizeThai(spaced(await res.json()))
+}
+
+/** Gap (seconds) between timed phrases that becomes a space in the transcript. */
+const PAUSE_SPACE = 0.2
+
+/** Join timed phrases with a space at every pause ≥ PAUSE_SPACE; plain text when no timestamps. */
+function spaced(j: { text?: string; timestamps?: { word?: { start: number; end: number; text: string }[] } }): string {
+  const words = j.timestamps?.word
+  if (!words?.length) return String(j.text ?? '')
+  let out = ''
+  let prevEnd = -1
+  for (const w of words) {
+    const t = String(w.text ?? '').trim()
+    if (!t) continue
+    out += out && (w.start - prevEnd >= PAUSE_SPACE || /\s$/.test(w.text)) ? ' ' + t : t
+    prevEnd = w.end
+  }
+  return out
 }
 
 // ---- streaming state -------------------------------------------------------

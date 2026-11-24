@@ -86,7 +86,7 @@ function speakMakham(text: string, speed: number, key?: string) {
       src.connect(ctx!.destination)
       at = Math.max(at, ctx!.currentTime + 0.02)
       src.start(at)
-      at += buf.duration
+      at += buf.duration + m.pauseMs / 1000 // breathing room between phrases
       sources.push(src)
       pendingEnd++
       src.onended = () => {

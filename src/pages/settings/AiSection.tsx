@@ -37,7 +37,7 @@ export function AiSection() {
       <div className="card divide-y divide-slate-100 p-0">
         <ProviderRow label="สรุปแบบดึงประโยค (ไม่ใช้ AI)" sub="ในเครื่อง • ไม่ต้องตั้งค่า" active={def === EXTRACTIVE_ID} onDefault={() => { setDef(EXTRACTIVE_ID); setSetting('ai.default', EXTRACTIVE_ID) }} />
         {providers?.map((p) => (
-          <ProviderRow key={p.id} label={p.label} sub={`${p.model}${p.baseUrl ? ` • ${new URL(p.baseUrl).host}` : ''}`} active={def === p.id}
+          <ProviderRow key={p.id} label={p.label} sub={p.managed ? 'พร้อมใช้ทันที ไม่ต้องใช้ API key' : `${p.model}${p.baseUrl ? ` • ${new URL(p.baseUrl).host}` : ''}`} active={def === p.id}
             onDefault={() => { setDef(p.id); setSetting('ai.default', p.id) }} onEdit={() => setEdit(p)} />
         ))}
       </div>

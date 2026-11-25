@@ -212,6 +212,7 @@ export const en: typeof th = {
     privacy: {
       title: 'Privacy',
       body: 'meetingCraft has no server of its own. Meetings, audio, photos and API keys are stored in this browser’s IndexedDB on this device. OCR and read-aloud run on device; transcription sends short audio clips to Typhoon, and summaries send text to the AI you choose.',
+      stats: 'This site uses the Histats visitor counter to count page views only — no meeting data, audio or text is sent to it.',
       credits: 'Models: Typhoon ASR/LLM by SCB 10X • OpenThai2.1 OCR Text (Apache-2.0) by iApp • MakHam TTS (Apache-2.0) by PyThaiNLP',
     },
   },

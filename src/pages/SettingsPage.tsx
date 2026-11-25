@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Section, TopBar } from '../components/ui'
 import { AsrSection } from './settings/AsrSection'
 import { Logo } from '../components/Logo'
+import { HistatsCounter } from '../components/HistatsCounter'
 import { ModelsSection } from './settings/ModelsSection'
 import { AiSection } from './settings/AiSection'
 import { TtsSection } from './settings/TtsSection'
@@ -48,6 +49,8 @@ export function SettingsPage() {
           <p className="mb-1 font-semibold">{t.settings.privacy.title}</p>
           <p>{t.settings.privacy.body}</p>
           <p className="mt-2">{t.settings.privacy.credits}</p>
+          <p className="mt-2">{t.settings.privacy.stats}</p>
+          <HistatsCounter />
         </section>
       </main>
     </div>
